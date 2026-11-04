@@ -84,6 +84,10 @@ test("worker task and result contracts enforce identity and path ownership", () 
     reviewed_paths: ["README.md"], evidence_refs: [], summary: "Out of scope.", blockers: []
   }}), /outside its task ownership/);
   assert.throws(() => validateWorkerResult({ task, result: {
+    contract_version: "1.0", task_id: "task-1", worker_id: "hunter-1", status: "completed",
+    reviewed_paths: [], evidence_refs: [], summary: "No evidence.", blockers: []
+  }}), /require at least one owned reviewed path/);
+  assert.throws(() => validateWorkerResult({ task, result: {
     contract_version: "1.0", task_id: "task-1", worker_id: "different-worker", status: "completed",
     reviewed_paths: ["src/index.ts"], evidence_refs: [], summary: "Wrong worker.", blockers: []
   }}), /identity does not match/);
