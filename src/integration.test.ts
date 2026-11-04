@@ -73,11 +73,61 @@ test("MCP server initializes, discovers all tools, and executes a contract tool"
     });
     assert.equal(rejectedPort.isError, true);
 
+    for (const repository of ["example//repo", "../repo", "example/.."]) {
+      const malformed = await client.callTool({ name: "repository_inspect", arguments: { repository } });
+      assert.equal(malformed.isError, true);
+    }
+
     const rejectedPath = await client.callTool({
       name: "repository_read_file",
       arguments: { repository: "example/repo", path: "../secrets.txt" }
     });
     assert.equal(rejectedPath.isError, true);
+
+    const rejectedDotPath = await client.callTool({
+      name: "repository_read_file",
+      arguments: { repository: "example/repo", path: "./secrets.txt" }
+    });
+    assert.equal(rejectedDotPath.isError, true);
+
+    const reportFinding = {
+      verdict: "rejected",
+      fingerprint: "RULE:src/index.ts:10",
+      title: "Duplicate candidate",
+      description: "A duplicate fingerprint must not pass the report gate.",
+      evidence: [{ file: "src/index.ts", line: 10, description: "Source evidence." }],
+      trace: [{ kind: "sink", file: "src/index.ts", line: 10, scope: "test", description: "Review trace." }],
+      claimed_root_cause: "Claimed issue.",
+      rejection_reason: "Test fixture."
+    };
+    const duplicateReport = await client.callTool({
+      name: "audit_report_generate",
+      arguments: {
+        repository: "example/repo",
+        scope: "src/index.ts",
+        inventory_complete: true,
+        scope_paths: ["src/index.ts"],
+        coverage_ledger: [{ path: "src/index.ts", category: "application", status: "reviewed", rationale: "Reviewed." }],
+        findings: [reportFinding, reportFinding],
+        independent_checks: [{ fingerprint: reportFinding.fingerprint, agrees: true, evidence_matches: true, rationale: "Checked." }],
+        requested_status: "complete"
+      }
+    });
+    const duplicateReportText = duplicateReport.content.find(item => item.type === "text");
+    assert.ok(duplicateReportText && duplicateReportText.type === "text");
+    const duplicateReportPayload = JSON.parse(duplicateReportText.text) as { run_status?: string; gates?: { findings?: { valid?: boolean } } };
+    assert.equal(duplicateReportPayload.run_status, "incomplete");
+    assert.equal(duplicateReportPayload.gates?.findings?.valid, false);
+
+    const secret = "ghp_123456789012345678901234567890123456";
+    const secretScan = await client.callTool({
+      name: "source_security_review",
+      arguments: { source: `const token = ${secret}; eval(input); // Bearer abc.def-ghi`, filename: "src/example.ts" }
+    });
+    const secretScanText = secretScan.content.find(item => item.type === "text");
+    assert.ok(secretScanText && secretScanText.type === "text");
+    assert.equal(secretScanText.text.includes(secret), false);
+    assert.equal(secretScanText.text.includes("abc.def-ghi"), false);
   } finally {
     await client.close();
     await server.close();
