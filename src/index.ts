@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Security-Audit-MCP-Ver
  * Copyright (C) 2026 Hanzet22
@@ -9,7 +8,6 @@
  * this MCP process does not claim to spawn independent agents.
  */
 import { McpServer } from "@modelcontextprotocol/server";
-import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import * as z from "zod/v4";
 import {
   CoverageEntrySchema,
@@ -208,7 +206,7 @@ function generateReport(
   };
 }
 
-function createServer(): McpServer {
+export function createServer(): McpServer {
   const server = new McpServer({
     name: "security-audit-mcp-ver",
     version: "0.3.0"
@@ -621,4 +619,3 @@ function createServer(): McpServer {
   return server;
 }
 
-await serveStdio(createServer);
