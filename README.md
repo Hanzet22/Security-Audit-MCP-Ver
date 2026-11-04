@@ -21,7 +21,9 @@ The server currently exposes:
 | `audit_findings_validate` | 4 | Validate structured finding records |
 | `audit_independent_verify` | 5 | Compare findings with separately supplied reviewer checks |
 | `audit_report_generate` | 6 | Validate final gates and generate JSON/Markdown reports |
-| `cloudflare_reconnaissance_prepare` | 1 | Build run metadata, architecture summary, and canonical coverage ledger from four caller-supplied scout reports |\n| `cloudflare_hunting_wave_prepare` | 2 | Validate, rank, assign, and explicitly defer canonical coverage units for a bounded hunting wave |\n| `cloudflare_hunter_results_consolidate` | 2 | Validate ownership and structured hunter results, then consolidate only assigned ledger units |
+| `cloudflare_reconnaissance_prepare` | 1 | Build run metadata, architecture summary, and canonical coverage ledger from four caller-supplied scout reports |
+| `cloudflare_hunting_wave_prepare` | 2 | Validate, rank, assign, and explicitly defer canonical coverage units for a bounded hunting wave |
+| `cloudflare_hunter_results_consolidate` | 2 | Validate ownership and structured hunter results, then consolidate only assigned ledger units |
 | `cloudflare_coverage_ledger_validate` | 1–2 | Validate canonical coverage ledgers with Cloudflare's upstream validator |
 | `cloudflare_findings_validate` | 4–5 | Validate findings against Cloudflare's upstream report schema and semantic rules |
 
