@@ -112,9 +112,12 @@ export function validateWorkerTask(task: WorkerTask) {
   if (!SAFE_ID.test(task.task_id) || !SAFE_ID.test(task.worker_id)) throw new Error("task_id and worker_id must be safe identifiers.");
   if (!["recon","hunter","critic","verifier"].includes(task.role)) throw new Error("Unsupported worker role.");
   if (!task.source_ref.trim() || !task.objective.trim()) throw new Error("source_ref and objective are required.");
-  if (!Array.isArray(task.coverage_ids) || !unique(task.coverage_ids)) throw new Error("coverage_ids must be unique.");
-  if (!Array.isArray(task.allowed_paths) || !task.allowed_paths.every(isCloudflareSafeRelativePath) || !unique(task.allowed_paths)) {
-    throw new Error("allowed_paths must be unique safe repository-relative paths.");
+  if (!Array.isArray(task.coverage_ids) || task.coverage_ids.length === 0 || !unique(task.coverage_ids)) {
+    throw new Error("coverage_ids must be non-empty and unique.");
+  }
+  if (!Array.isArray(task.allowed_paths) || task.allowed_paths.length === 0 ||
+      !task.allowed_paths.every(isCloudflareSafeRelativePath) || !unique(task.allowed_paths)) {
+    throw new Error("allowed_paths must be non-empty, unique safe repository-relative paths.");
   }
   if (!Array.isArray(task.prohibited_actions) || task.prohibited_actions.length === 0) throw new Error("prohibited_actions must explicitly state worker boundaries.");
   return { valid: true, task: clone(task), execution_mode: "caller_managed", note: "Validated task contract only; no worker process was started." };
@@ -147,8 +150,12 @@ export function validateWorkerResult(input: { task: WorkerTask; result: WorkerRe
   if (result.status === "completed" && (result.reviewed_paths.length === 0 || result.evidence_refs.length === 0)) {
     throw new Error("Completed worker results require at least one owned reviewed path and one evidence reference.");
   }
-  if (!Array.isArray(result.blockers) || (result.status === "completed" && result.blockers.length > 0) ||
-      (result.status === "blocked" && result.blockers.length === 0)) throw new Error("Completed results cannot have blockers; blocked results require blockers.");
+  if (!Array.isArray(result.blockers) ||
+      !result.blockers.every(item => typeof item === "string" && item.trim().length > 0 && item.length <= 3000) ||
+      (result.status === "completed" && result.blockers.length > 0) ||
+      (result.status === "blocked" && result.blockers.length === 0)) {
+    throw new Error("Blockers must be non-empty strings; completed results cannot have blockers and blocked results require blockers.");
+  }
   return { valid: true, task_id: result.task_id, worker_id: result.worker_id, status: result.status, reviewed_paths: [...result.reviewed_paths], evidence_refs: [...result.evidence_refs], summary: result.summary, blockers: [...result.blockers] };
 }
 
@@ -191,6 +198,8 @@ export function orchestrateWorkerRun(input:
       state: initialState,
       next_action: "Collect each worker result, validate it with worker_result_contract_validate, then record its status.",
       execution_mode: "caller_managed",
+      trust_model: "caller_supplied_unsigned_state",
+      security_note: "Orchestration state is caller-held unsigned JSON and can be altered or replayed. Gates check workflow consistency; they are not an authorization boundary or proof that independent work occurred.",
       limitations: ["The orchestrator is a stateless workflow controller; it does not create threads, processes, agents, queues, or background jobs."]
     };
   }
@@ -229,5 +238,11 @@ export function orchestrateWorkerRun(input:
     complete: "Current wave completed; a caller may initialize a new wave.",
     blocked: "Stop progression; resolve blockers, reassign work, or explicitly defer with rationale."
   } as const)[state.phase];
-  return { state, next_action, execution_mode: "caller_managed" };
+  return {
+    state,
+    next_action,
+    execution_mode: "caller_managed",
+    trust_model: "caller_supplied_unsigned_state",
+    security_note: "Orchestration state is caller-held unsigned JSON and can be altered or replayed. Gates check workflow consistency; they are not an authorization boundary or proof that independent work occurred."
+  };
 }
