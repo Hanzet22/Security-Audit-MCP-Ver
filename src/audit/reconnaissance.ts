@@ -14,12 +14,12 @@ export type ScoutReports = {
   local_execution_deployment: ReconFact[];
 };
 export type ReconCoverageUnit = {
-  canonical_refs: { surface: string; boundary: string; subsystem: string; attack_class: string; lifecycle?: string };
+  canonical_refs: { surface: string; boundary: string; subsystem: string; attack_class: string; lifecycle?: string | undefined };
   surface: string;
   boundary: string;
   subsystem: string;
   attack_class: string;
-  lifecycle?: string;
+  lifecycle?: string | undefined;
   starting_paths: string[];
   ordinary_attack_class_block: string | null;
   selected_companion_blocks: string[];
@@ -88,9 +88,7 @@ export function prepareCloudflareReconnaissance(input: {
       reserved_verifier_invocations: 1,
       passed: !budgetBlocked
     },
-    prior_run_handling: compatiblePriorRuns
-      ? "Prior-run paths supplied but contents must be read, validated, and compared before any carry-forward decision."
-      : "No compatible prior-run ledger or findings were supplied; no prior coverage is assumed."
+    prior_run_handling: "No compatible prior-run ledger or findings were supplied; no prior coverage is assumed."
   };
 
   const allFacts = [
