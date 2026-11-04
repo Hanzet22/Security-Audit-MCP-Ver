@@ -1,11 +1,68 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import * as fc from "fast-check";
 import {
   validateCoverage,
   validateFindings,
   verifyIndependentReview,
   type Finding
 } from "./contracts.js";
+
+
+const makeRejectedFinding = (fingerprint: string): Finding => ({
+  verdict: "rejected",
+  fingerprint,
+  title: "Property-generated candidate",
+  description: "A property-generated finding fixture.",
+  evidence: [{ file: "src/example.ts", line: 1, description: "Source evidence." }],
+  trace: [{ kind: "sink", file: "src/example.ts", line: 1, scope: "test boundary", description: "Review trace." }],
+  claimed_root_cause: "Unverified claim.",
+  rejection_reason: "The test fixture does not establish an issue."
+});
+
+test("property: duplicate fingerprints are always rejected", () => {
+  fc.assert(fc.property(
+    fc.stringMatching(/^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,120}$/),
+    fingerprint => {
+      const result = validateFindings([
+        makeRejectedFinding(fingerprint),
+        makeRejectedFinding(fingerprint)
+      ]);
+      assert.equal(result.valid, false);
+      assert.ok(result.errors.some(error => error.includes("Duplicate fingerprint")));
+    }
+  ));
+});
+
+test("property: one-to-one independent reviews pass for unique findings", () => {
+  fc.assert(fc.property(
+    fc.uniqueArray(fc.stringMatching(/^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,120}$/), { minLength: 1, maxLength: 12 }),
+    fingerprints => {
+      const findings = fingerprints.map(makeRejectedFinding);
+      const checks = fingerprints.map(fingerprint => ({
+        fingerprint, agrees: true, evidence_matches: true, rationale: "Property-generated independent review."
+      }));
+      assert.equal(verifyIndependentReview(findings, checks).passed, true);
+    }
+  ));
+});
+
+test("property: unrelated review fingerprints never pass", () => {
+  fc.assert(fc.property(
+    fc.stringMatching(/^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,120}$/),
+    unknownFingerprint => {
+      fc.pre(unknownFingerprint !== "KNOWN:1");
+      const finding = makeRejectedFinding("KNOWN:1");
+      const checks = [
+        { fingerprint: "KNOWN:1", agrees: true, evidence_matches: true, rationale: "Matched." },
+        { fingerprint: unknownFingerprint, agrees: true, evidence_matches: true, rationale: "Unrelated." }
+      ];
+      const result = verifyIndependentReview([finding], checks);
+      assert.equal(result.passed, false);
+      assert.deepEqual(result.unknown_review_records, [unknownFingerprint]);
+    }
+  ));
+});
 
 test("coverage is incomplete while any in-scope path is not reviewed", () => {
   const result = validateCoverage(["src/a.ts"], [{
