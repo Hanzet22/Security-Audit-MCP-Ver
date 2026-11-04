@@ -70,6 +70,12 @@ export type CoverageEntry = z.infer<typeof CoverageEntrySchema>;
 export function validateCoverage(scopePaths: string[], entries: CoverageEntry[]) {
   const errors: string[] = [];
   const seen = new Set<string>();
+  const scopeSeen = new Set<string>();
+
+  for (const path of scopePaths) {
+    if (scopeSeen.has(path)) errors.push(`Duplicate in-scope path: ${path}`);
+    scopeSeen.add(path);
+  }
 
   for (const entry of entries) {
     if (seen.has(entry.path)) errors.push(`Duplicate coverage path: ${entry.path}`);
@@ -85,6 +91,7 @@ export function validateCoverage(scopePaths: string[], entries: CoverageEntry[])
   if (missing.length) errors.push(`Missing coverage entries: ${missing.length}`);
 
   const notReviewed = entries.filter(entry => entry.status === "not_reviewed").map(entry => entry.path);
+  if (notReviewed.length) errors.push(`Unreviewed in-scope paths: ${notReviewed.length}`);
   return {
     valid: errors.length === 0,
     errors,
