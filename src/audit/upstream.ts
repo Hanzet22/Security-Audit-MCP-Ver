@@ -16,6 +16,10 @@ const findingsValidator = require("../../vendor/cloudflare-security-audit-skill/
 };
 const reportSchema: unknown = require("../../vendor/cloudflare-security-audit-skill/report-schema.json");
 
+export function canonicalCloudflareCoverageId(refs: Record<string, string>): string {
+  return coverageValidator.canonicalCoverageId(refs);
+}
+
 function serializedInputSize(value: unknown): number {
   let serialized: string | undefined;
   try {
