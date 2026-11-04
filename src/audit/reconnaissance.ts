@@ -33,6 +33,15 @@ const REQUIRED_SCOUTS = [
   "local_execution_deployment"
 ] as const;
 
+function escapeMarkdown(value: string): string {
+  return value
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\\/g, "\\\\")
+    .replace(/([\x60*_{}\[\]()#+\-.!|>])/g, "\\$1")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function words(value: string): number {
   return value.trim() ? value.trim().split(/\s+/u).length : 0;
 }
@@ -40,7 +49,7 @@ function words(value: string): number {
 function factLines(name: string, facts: ReconFact[]): string[] {
   return [
     `### ${name}`,
-    ...(facts.length ? facts.map(f => `- ${f.statement} (source: ${f.refs.join(", ")})`) : ["- Not supplied; this area remains unmapped."])
+    ...(facts.length ? facts.map(f => `- ${escapeMarkdown(f.statement)} (source: ${f.refs.map(escapeMarkdown).join(", ")})`) : ["- Not supplied; this area remains unmapped."])
   ];
 }
 
@@ -116,8 +125,8 @@ export function prepareCloudflareReconnaissance(input: {
   const architecture = [
     "# Architecture Summary",
     "",
-    `- Repository: ${input.repository}`,
-    `- Source ref: ${input.source_ref}`,
+    `- Repository: ${escapeMarkdown(input.repository)}`,
+    `- Source ref: ${escapeMarkdown(input.source_ref)}`,
     `- Profile: ${input.profile}`,
     `- Scope: ${input.scope_paths.length ? `${input.scope_paths.length} explicit repository paths` : "all discovered paths"}`,
     `- Prior-run input: ${metadata.prior_run_handling}`,
