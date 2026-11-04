@@ -497,7 +497,7 @@ export function createServer(): McpServer {
   });
 
   server.registerTool("worker_orchestrator_step", {
-    description: "Advance a stateless parent-side workflow through hunting, critic, independent-verification and next-wave gates. Validate each worker payload with worker_result_contract_validate before recording its status. Caller supplies all results; no agents, processes, queues or background jobs are spawned.",
+    description: "Advance a stateless parent-side workflow through hunting, critic, independent-verification and next-wave gates. Validate each worker payload with worker_result_contract_validate before recording its status. State is caller-held unsigned JSON and is not an authorization or attestation boundary. Caller supplies all results; no agents, processes, queues or background jobs are spawned.",
     inputSchema: z.discriminatedUnion("action", [
       z.strictObject({
         action: z.literal("initialize"),
