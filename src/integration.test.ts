@@ -153,7 +153,7 @@ test("MCP server initializes, discovers all tools, and executes a contract tool"
     }
 
     const secrets = [
-      "ghp_123456789012345678901234567890123456",
+      "ghp_FAKE_TOKEN_123456789",
       "abc.def-ghi",
       "dXNlcjpwYXNz",
       "xoxb-1234567890-abcdefghijk",
