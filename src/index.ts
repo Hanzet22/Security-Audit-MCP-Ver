@@ -18,6 +18,10 @@ import {
   validateFindings,
   verifyIndependentReview
 } from "./audit/contracts.js";
+import {
+  validateCloudflareCoverageLedger,
+  validateCloudflareFindings
+} from "./audit/upstream.js";
 
 const API_ROOT = "https://api.github.com";
 const MAX_FILE_BYTES = 300_000;
@@ -350,6 +354,30 @@ function createServer(): McpServer {
       ]
     });
   });
+
+  server.registerTool("cloudflare_coverage_ledger_validate", {
+    description: "Validate a canonical coverage-ledger.json document with Cloudflare Security Audit Skill's upstream validator.",
+    inputSchema: z.object({
+      ledger: z.array(z.unknown()).max(10_000)
+    })
+  }, async ({ ledger }) => result({
+    upstream: "cloudflare/security-audit-skill",
+    upstream_validator: "validate-coverage-ledger.cjs",
+    phase: 1,
+    ...validateCloudflareCoverageLedger(ledger)
+  }));
+
+  server.registerTool("cloudflare_findings_validate", {
+    description: "Validate findings.json against Cloudflare Security Audit Skill's upstream report-schema.json and semantic checks.",
+    inputSchema: z.object({
+      findings: z.array(z.unknown()).max(1000)
+    })
+  }, async ({ findings }) => result({
+    upstream: "cloudflare/security-audit-skill",
+    upstream_validator: "validate-findings.cjs",
+    phase: 4,
+    ...validateCloudflareFindings(findings)
+  }));
 
   server.registerTool("audit_coverage_validate", {
     description: "Phase 2: validate that every in-scope path has exactly one coverage-ledger entry.",
