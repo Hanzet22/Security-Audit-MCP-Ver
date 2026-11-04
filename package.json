@@ -25,7 +25,7 @@
     "@types/node": "^22.15.30",
     "fast-check": "^4.10.2",
     "tsx": "^4.19.4",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   },
   "license": "AGPL-3.0-or-later"
 }
