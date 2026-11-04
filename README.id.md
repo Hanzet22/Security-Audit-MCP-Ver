@@ -2,13 +2,15 @@
 
 [English (EU)](./README.md) · [English (US)](./README.en-US.md) · [Bahasa Indonesia](./README.id.md) · [Malay (Singapore)](./README.ms-SG.md)
 
+**Setup guide:** [SETUP.md](./SETUP.md)
+
 Perangkat audit keamanan kode sumber berbasis bukti yang bersifat **read-only** dan tersedia melalui Model Context Protocol (MCP).
 
 Implementasi independen yang terinspirasi oleh alur kerja [Cloudflare Security Audit Skill](https://github.com/cloudflare/security-audit-skill). Proyek ini tidak berafiliasi dengan atau didukung secara resmi oleh Cloudflare. Materi upstream Cloudflare tetap menggunakan lisensi MIT aslinya; kode proyek ini menggunakan AGPL-3.0-or-later. Lihat [ATTRIBUTIONS.md](./ATTRIBUTIONS.md).
 
 ## Status
 
-**Status publikasi versi 0.3.0: masih menunggu.** Tag rilis dan GitHub Release resmi harus tersedia sebelum versi ini dinyatakan telah diterbitkan. Lihat [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md).
+**Versi 0.3.1 — RELEASED.** Lihat [CHANGELOG.md](./CHANGELOG.md) untuk catatan perubahan dan [SETUP.md](./SETUP.md) untuk panduan instalasi serta konfigurasi klien MCP.
 
 Server menyediakan 18 MCP tools untuk reconnaissance repositori, perencanaan cakupan, peninjauan kode sumber, validasi temuan, verifikasi independen, kontrak orkestrasi, dan pembuatan laporan. Ini adalah kumpulan primitive alur kerja, bukan agen audit otonom.
 
