@@ -40,19 +40,20 @@ test("MCP server initializes, discovers all tools, and executes a contract tool"
     );
     assert.equal(listed.tools.length, 18);
 
+    const validWorkerTask = {
+      contract_version: "1.0",
+      task_id: "integration-task",
+      worker_id: "integration-worker",
+      role: "hunter",
+      source_ref: "abcdef1234567",
+      coverage_ids: ["coverage-1"],
+      allowed_paths: ["src/index.ts"],
+      objective: "Validate the MCP request/response path.",
+      prohibited_actions: ["Do not execute target code."]
+    };
     const called = await client.callTool({
       name: "worker_task_contract_validate",
-      arguments: {
-        contract_version: "1.0",
-        task_id: "integration-task",
-        worker_id: "integration-worker",
-        role: "hunter",
-        source_ref: "abcdef1234567",
-        coverage_ids: ["coverage-1"],
-        allowed_paths: ["src/index.ts"],
-        objective: "Validate the MCP request/response path.",
-        prohibited_actions: ["Do not execute target code."]
-      }
+      arguments: validWorkerTask
     });
 
     assert.notEqual(called.isError, true);
@@ -60,6 +61,58 @@ test("MCP server initializes, discovers all tools, and executes a contract tool"
     assert.ok(textContent && textContent.type === "text");
     const payload = JSON.parse(textContent.text) as { valid?: boolean };
     assert.equal(payload.valid, true);
+
+    const emptyCoverageTask = await client.callTool({
+      name: "worker_task_contract_validate",
+      arguments: { ...validWorkerTask, coverage_ids: [] }
+    });
+    assert.equal(emptyCoverageTask.isError, true);
+
+    const emptyPathsTask = await client.callTool({
+      name: "worker_task_contract_validate",
+      arguments: { ...validWorkerTask, allowed_paths: [] }
+    });
+    assert.equal(emptyPathsTask.isError, true);
+
+    const malformedNestedTask = await client.callTool({
+      name: "worker_result_contract_validate",
+      arguments: {
+        task: { ...validWorkerTask, coverage_ids: [] },
+        worker_result: {
+          contract_version: "1.0",
+          task_id: "integration-task",
+          worker_id: "integration-worker",
+          status: "blocked",
+          reviewed_paths: [],
+          evidence_refs: [],
+          summary: "Blocked by invalid task contract.",
+          blockers: ["Invalid task fixture."]
+        }
+      }
+    });
+    assert.equal(malformedNestedTask.isError, true);
+
+    const hunterResultWithoutChecks = await client.callTool({
+      name: "cloudflare_hunter_results_consolidate",
+      arguments: {
+        ledger: [],
+        assigned_coverage_ids: ["coverage-1"],
+        results: [{
+          units: [{
+            coverage_id: "coverage-1",
+            disposition: "covered",
+            reviewed_paths: [],
+            checks: [],
+            candidate_fingerprints: [],
+            unresolved: []
+          }],
+          candidates: [],
+          hardening: [],
+          uncovered: []
+        }]
+      }
+    });
+    assert.equal(hunterResultWithoutChecks.isError, true);
 
     const rejectedUrl = await client.callTool({
       name: "repository_inspect",
