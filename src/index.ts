@@ -87,7 +87,7 @@ async function inspectRepo(repository: string, ref?: string) {
   const metadata = await github(base);
   const branch = parsed.ref ?? metadata.default_branch;
   const tree = await github(`${base}/git/trees/${encodeURIComponent(branch)}?recursive=1`);
-  const entries = (tree.tree ?? []).slice(0, MAX_TREE_ITEMS).map((item: any) => ({
+  const entries: Array<{ path: string; type: string; size: number | null }> = (tree.tree ?? []).slice(0, MAX_TREE_ITEMS).map((item: { path: string; type: string; size?: number | null }) => ({
     path: item.path as string,
     type: item.type as string,
     size: item.size ?? null
