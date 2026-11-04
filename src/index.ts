@@ -308,15 +308,15 @@ const HunterResultSchema = z.strictObject({
     reviewed_paths: z.array(z.string().min(1).max(500)).max(5000),
     checks: z.array(z.strictObject({
       agent_id: z.string().min(1).max(64),
-      reviewed_paths: z.array(z.string().min(1).max(500)).max(5000),
+      reviewed_paths: z.array(z.string().min(1).max(500)).min(1).max(5000),
       invariant: z.string().min(1).max(5000),
       method: z.enum(["source", "local"]),
       result: z.string().min(1).max(5000),
       artifact: z.string().max(1000).nullable()
-    })).max(1000),
+    })).min(1).max(1000),
     candidate_fingerprints: z.array(z.string().min(1).max(500)).max(1000),
     unresolved: z.array(z.string().min(1).max(1000)).max(1000)
-  })).max(10000),
+  })).min(1).max(10000),
   candidates: z.array(z.record(z.string(), z.unknown())).max(1000),
   hardening: z.array(z.string().min(1).max(2000)).max(1000),
   uncovered: z.array(z.strictObject({
@@ -515,17 +515,8 @@ export function createServer(): McpServer {
 
   server.registerTool("worker_task_contract_validate", {
     description: "Validate a versioned worker task contract, role, source ref, assigned coverage IDs, safe owned paths, objective and explicit prohibited actions. Does not start a worker.",
-    inputSchema: z.strictObject({
-      contract_version: z.literal("1.0"),
-      task_id: z.string().min(1).max(64),
-      worker_id: z.string().min(1).max(64),
-      role: z.enum(["recon", "hunter", "critic", "verifier"]),
-      source_ref: z.string().min(1).max(200),
-      coverage_ids: z.array(z.string().min(1).max(65536)).max(10000),
-      allowed_paths: z.array(z.string().min(1).max(500)).min(1).max(5000),
-      objective: z.string().min(1).max(3000),
-      prohibited_actions: z.array(z.string().min(1).max(1000)).min(1).max(100)
-    })
+    inputSchema: WorkerTaskSchema
+
   }, async task => {
     try { return result(validateWorkerTask(task)); }
     catch (error) { return failure(error); }
