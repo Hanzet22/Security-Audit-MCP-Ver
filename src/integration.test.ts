@@ -123,7 +123,7 @@ test("MCP server initializes, discovers all tools, and executes a contract tool"
       name: "audit_report_generate",
       arguments: {
         repository: "example/repo",
-        scope: "src/index.ts\\n## forged heading",
+        scope: "src/index.ts\n## forged heading",
         inventory_complete: true,
         scope_paths: ["src/index.ts"],
         coverage_ledger: [{ path: "src/index.ts", category: "application", status: "reviewed", rationale: "Reviewed." }],
@@ -131,11 +131,11 @@ test("MCP server initializes, discovers all tools, and executes a contract tool"
           verdict: "needs_validation",
           fingerprint: "RULE:src/index.ts:11",
           title: "[click](https://example.invalid)",
-          description: "<img src=x onerror=alert(1)>\\n## forged heading",
+          description: "<img src=x onerror=alert(1)>\n## forged heading",
           evidence: [{ file: "src/index.ts", line: 11, description: "Untrusted evidence text." }],
           trace: [{ kind: "sink", file: "src/index.ts", line: 11, scope: "test", description: "Untrusted trace text." }],
           claimed_root_cause: "Unverified.",
-          blockers: ["missing context\\n## forged heading"],
+          blockers: ["missing context\n## forged heading"],
           validation_plan: "[open](https://example.invalid)"
         }],
         independent_checks: [],
