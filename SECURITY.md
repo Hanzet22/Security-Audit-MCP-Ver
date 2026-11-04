@@ -15,7 +15,7 @@ Use GitHub's **Report a vulnerability** feature in the repository's Security tab
 - Reproduction context and steps that do not access data or systems you do not own or have permission to test.
 - Relevant logs or a minimal proof of concept, with secrets and personal data removed.
 
-If private reporting is unavailable, contact the maintainer privately through a contact method listed on the maintainer's GitHub profile. Do not send credentials, access tokens, or private user data.
+If private reporting is unavailable, contact the maintainer privately through the [maintainer's GitHub profile](https://github.com/Hanzet22). Do not send credentials, access tokens, or private user data.
 
 Please allow the maintainer reasonable time to investigate and coordinate a fix before public disclosure. A response or remediation timeline is not guaranteed.
 
