@@ -1,6 +1,6 @@
 {
   "name": "security-audit-mcp-ver",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": false,
   "description": "Read-only, evidence-led source security audit tools exposed through MCP.",
   "type": "module",
@@ -12,7 +12,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "tsx --test src/audit/contracts.test.ts"
+    "test": "tsx --test src/audit/contracts.test.ts src/audit/upstream.test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.4.0",
@@ -24,4 +24,4 @@
     "typescript": "^5.9.3"
   },
   "license": "AGPL-3.0-or-later"
-}
+}\n
