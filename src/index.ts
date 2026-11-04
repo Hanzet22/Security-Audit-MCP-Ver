@@ -184,6 +184,15 @@ function redactEvidence(line: string): string {
     .slice(0, 220);
 }
 
+function escapeMarkdown(value: string): string {
+  return value
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\\/g, "\\\\")
+    .replace(/([\x60*_{}\[\]()#+\-.!|>])/g, "\\$1")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function generateReport(
   repository: string,
   scope: string,
@@ -201,8 +210,8 @@ function generateReport(
   const report = [
     "# Security Audit Report",
     "",
-    `- Repository: ${repository}`,
-    `- Scope: ${scope}`,
+    `- Repository: ${escapeMarkdown(repository)}`,
+    `- Scope: ${escapeMarkdown(scope)}`,
     `- Run status: ${status}`,
     `- Confirmed: ${confirmed.length}`,
     `- Needs validation: ${pending.length}`,
@@ -213,13 +222,13 @@ function generateReport(
       : "This run is incomplete. Do not interpret the current findings as a complete audit.",
     "",
     "## Confirmed findings",
-    confirmed.length ? confirmed.map(item => `- **${item.title}** (${item.severity}, ${item.confidence}) — ${item.description}`).join("\n") : "No confirmed findings recorded.",
+    confirmed.length ? confirmed.map(item => `- **${escapeMarkdown(item.title)}** (${item.severity}, ${item.confidence}) — ${escapeMarkdown(item.description)}`).join("\n") : "No confirmed findings recorded.",
     "",
     "## Needs validation",
-    pending.length ? pending.map(item => `- **${item.title}** — ${item.description} Blockers: ${item.blockers.join("; ")}`).join("\n") : "No pending candidates.",
+    pending.length ? pending.map(item => `- **${escapeMarkdown(item.title)}** — ${escapeMarkdown(item.description)} Blockers: ${item.blockers.map(escapeMarkdown).join("; ")}`).join("\n") : "No pending candidates.",
     "",
     "## Rejected candidates",
-    rejected.length ? rejected.map(item => `- **${item.title}** — ${item.rejection_reason}`).join("\n") : "No rejected candidates.",
+    rejected.length ? rejected.map(item => `- **${escapeMarkdown(item.title)}** — ${escapeMarkdown(item.rejection_reason)}`).join("\n") : "No rejected candidates.",
     "",
     "## Method and limitations",
     "- Source inspection only; target code was not executed.",
@@ -233,19 +242,19 @@ function generateReport(
     "# Findings Detail",
     "",
     ...findings.map(item => [
-      `## ${item.title}`,
+      `## ${escapeMarkdown(item.title)}`,
       `- Verdict: ${item.verdict}`,
-      `- Fingerprint: ${item.fingerprint}`,
-      `- Description: ${item.description}`,
-      ...item.evidence.map(ev => `- Evidence: ${ev.file}:${ev.line} — ${ev.description}`),
-      ...item.trace.map(step => `- Trace (${step.kind}): ${step.file}:${step.line} — ${step.description}`),
-      item.verdict === "confirmed" ? `- Root cause: ${item.root_cause}` : `- Claimed root cause: ${item.claimed_root_cause}`,
-      item.verdict === "confirmed" ? `- Affected boundary: ${item.affected_boundary}` : "",
-      item.verdict === "confirmed" ? `- Impact: ${item.impact}` : "",
+      `- Fingerprint: ${escapeMarkdown(item.fingerprint)}`,
+      `- Description: ${escapeMarkdown(item.description)}`,
+      ...item.evidence.map(ev => `- Evidence: ${escapeMarkdown(ev.file)}:${ev.line} — ${escapeMarkdown(ev.description)}`),
+      ...item.trace.map(step => `- Trace (${escapeMarkdown(step.kind)}): ${escapeMarkdown(step.file)}:${step.line} — ${escapeMarkdown(step.description)}`),
+      item.verdict === "confirmed" ? `- Root cause: ${escapeMarkdown(item.root_cause)}` : `- Claimed root cause: ${escapeMarkdown(item.claimed_root_cause)}`,
+      item.verdict === "confirmed" ? `- Affected boundary: ${escapeMarkdown(item.affected_boundary)}` : "",
+      item.verdict === "confirmed" ? `- Impact: ${escapeMarkdown(item.impact)}` : "",
       item.verdict === "confirmed" ? `- Severity: ${item.severity}; confidence: ${item.confidence}` : "",
-      item.verdict === "confirmed" ? `- Remediation: ${item.remediation}` : "",
-      item.verdict === "rejected" ? `- Rejection reason: ${item.rejection_reason}` : "",
-      item.verdict === "needs_validation" ? `- Blockers: ${item.blockers.join("; ")}` : "",
+      item.verdict === "confirmed" ? `- Remediation: ${escapeMarkdown(item.remediation)}` : "",
+      item.verdict === "rejected" ? `- Rejection reason: ${escapeMarkdown(item.rejection_reason)}` : "",
+      item.verdict === "needs_validation" ? `- Blockers: ${item.blockers.map(escapeMarkdown).join("; ")}` : "",
       ""
     ].filter(Boolean).join("\n"))
   ].join("\n");
@@ -253,7 +262,7 @@ function generateReport(
   const needsValidation = [
     "# Needs Validation",
     "",
-    ...pending.map(item => `## ${item.title}\n\n${item.description}\n\nBlockers:\n${item.blockers.map(b => `- ${b}`).join("\n")}\n\nValidation plan: ${item.validation_plan}\n`)
+    ...pending.map(item => `## ${escapeMarkdown(item.title)}\n\n${escapeMarkdown(item.description)}\n\nBlockers:\n${item.blockers.map(b => `- ${escapeMarkdown(b)}`).join("\n")}\n\nValidation plan: ${escapeMarkdown(item.validation_plan)}\n`)
   ].join("\n");
 
   return {
