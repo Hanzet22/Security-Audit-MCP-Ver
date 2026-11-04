@@ -174,11 +174,11 @@ function categorize(path: string): "application" | "configuration" | "dependency
 
 function redactEvidence(line: string): string {
   return line
-    .replace(/((?:api[_-]?key|secret|password|token|authorization|access[_-]?key|client[_-]?secret)\s*[:=]\s*)(?:"[^"\\r\\n]*"|'[^'\\r\\n]*'|[^\\s,;]+)/gi, "$1[REDACTED]")
-    .replace(/\\bBearer\\s+[A-Za-z0-9._~+\\/= -]+/gi, "Bearer [REDACTED]")
-    .replace(/\\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\\b/g, "[REDACTED]")
-    .replace(/\\bAKIA[0-9A-Z]{16}\\b/g, "[REDACTED]")
-    .replace(/\\beyJ[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}\\b/g, "[REDACTED]")
+    .replace(/((?:api[_-]?key|secret|password|token|authorization|access[_-]?key|client[_-]?secret)\s*[:=]\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s,;]+)/gi, "$1[REDACTED]")
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED]")
+    .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g, "[REDACTED]")
+    .replace(/\bAKIA[0-9A-Z]{16}\b/g, "[REDACTED]")
+    .replace(/\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\b/g, "[REDACTED]")
     .slice(0, 220);
 }
 
@@ -318,7 +318,7 @@ export function createServer(): McpServer {
   }, async ({ repository, path, ref }) => {
     try {
       if (path.startsWith("/") || path.includes("\\") ||
-          /[\\u0000-\\u001f\\u007f]/.test(path) ||
+          /[\u0000-\u001f\u007f]/.test(path) ||
           path.split("/").some(part => part === "." || part === ".." || part === "")) {
         throw new Error("Absolute paths, backslashes, control characters, dot segments and empty path segments are not allowed.");
       }
@@ -329,7 +329,7 @@ export function createServer(): McpServer {
       if (Array.isArray(data) || data.type !== "file") throw new Error("The requested path is not a single file.");
       if ((data.size ?? 0) > MAX_FILE_BYTES) throw new Error("File exceeds the 300 KB read limit.");
       if (data.encoding !== "base64" || typeof data.content !== "string") throw new Error("GitHub did not return a supported text file.");
-      const base64 = data.content.replace(/\\s/g, "");
+      const base64 = data.content.replace(/\s/g, "");
       if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(base64)) {
         throw new Error("GitHub returned invalid base64 file content.");
       }
