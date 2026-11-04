@@ -24,6 +24,7 @@ import {
 } from "./audit/upstream.js";
 import { prepareCloudflareReconnaissance } from "./audit/reconnaissance.js";
 import { consolidateCloudflareHunterResults, prepareCloudflareHuntingWave } from "./audit/hunting.js";
+import { orchestrateWorkerRun, validateCloudflareCoverageCritic, validateWorkerResult, validateWorkerTask } from "./audit/orchestration.js";
 
 const API_ROOT = "https://api.github.com";
 const MAX_FILE_BYTES = 300_000;
@@ -351,6 +352,97 @@ function createServer(): McpServer {
     try {
       return result(consolidateCloudflareHunterResults(input as Parameters<typeof consolidateCloudflareHunterResults>[0]));
     } catch (error) { return failure(error); }
+  });
+
+
+  server.registerTool("cloudflare_coverage_critic", {
+    description: "Validate a caller-supplied full-ledger critic review, identify unexamined or newly proposed coverage, and gate the next wave. Does not spawn an independent critic or inspect source files itself.",
+    inputSchema: z.strictObject({
+      ledger: z.array(z.unknown()).max(10000),
+      review: z.strictObject({
+        reviewer_id: z.string().min(1).max(64),
+        reviewed_at: z.string().min(1).max(100),
+        architecture_refs: z.array(z.string().min(1).max(1000)).min(1).max(500),
+        examined_coverage_ids: z.array(z.string().min(1).max(65536)).max(10000),
+        missing_units: z.array(z.strictObject({
+          coverage_id: z.string().min(1).max(65536),
+          reason: z.string().min(1).max(3000),
+          starting_paths: z.array(z.string().min(1).max(500)).min(1).max(100)
+        })).max(1000),
+        reassign_ids: z.array(z.strictObject({
+          coverage_id: z.string().min(1).max(65536),
+          reason: z.string().min(1).max(3000)
+        })).max(10000),
+        accepted_deferred_ids: z.array(z.strictObject({
+          coverage_id: z.string().min(1).max(65536),
+          reason: z.string().min(1).max(3000)
+        })).max(10000),
+        unresolved_questions: z.array(z.string().min(1).max(3000)).max(1000)
+      })
+    })
+  }, async input => {
+    try { return result(validateCloudflareCoverageCritic(input)); }
+    catch (error) { return failure(error); }
+  });
+
+  server.registerTool("worker_task_contract_validate", {
+    description: "Validate a versioned worker task contract, role, source ref, assigned coverage IDs, safe owned paths, objective and explicit prohibited actions. Does not start a worker.",
+    inputSchema: z.strictObject({
+      contract_version: z.literal("1.0"),
+      task_id: z.string().min(1).max(64),
+      worker_id: z.string().min(1).max(64),
+      role: z.enum(["recon", "hunter", "critic", "verifier"]),
+      source_ref: z.string().min(1).max(200),
+      coverage_ids: z.array(z.string().min(1).max(65536)).max(10000),
+      allowed_paths: z.array(z.string().min(1).max(500)).max(5000),
+      objective: z.string().min(1).max(3000),
+      prohibited_actions: z.array(z.string().min(1).max(1000)).min(1).max(100)
+    })
+  }, async task => {
+    try { return result(validateWorkerTask(task)); }
+    catch (error) { return failure(error); }
+  });
+
+  server.registerTool("worker_result_contract_validate", {
+    description: "Validate a worker result against its assigned task identity and path ownership. Evidence references are caller-supplied and are not independently authenticated by this contract.",
+    inputSchema: z.strictObject({
+      task: z.unknown(),
+      worker_result: z.strictObject({
+        contract_version: z.literal("1.0"),
+        task_id: z.string().min(1).max(64),
+        worker_id: z.string().min(1).max(64),
+        status: z.enum(["completed", "blocked"]),
+        reviewed_paths: z.array(z.string().min(1).max(500)).max(5000),
+        evidence_refs: z.array(z.string().min(1).max(2000)).max(10000),
+        summary: z.string().min(1).max(10000),
+        blockers: z.array(z.string().min(1).max(3000)).max(1000)
+      })
+    })
+  }, async input => {
+    try { return result(validateWorkerResult({ task: input.task as Parameters<typeof validateWorkerResult>[0]["task"], result: input.worker_result })); }
+    catch (error) { return failure(error); }
+  });
+
+  server.registerTool("worker_orchestrator_step", {
+    description: "Advance a stateless parent-side worker workflow through hunting, critic, independent-verification and next-wave gates. Caller supplies worker/critic/verifier results; no agents, processes, queues or background jobs are spawned.",
+    inputSchema: z.discriminatedUnion("action", [
+      z.strictObject({
+        action: z.literal("initialize"),
+        run_id: z.string().min(1).max(64),
+        assignments: z.array(z.strictObject({
+          task_id: z.string().min(1).max(64),
+          worker_id: z.string().min(1).max(64),
+          coverage_id: z.string().min(1).max(65536)
+        })).min(1).max(100)
+      }),
+      z.strictObject({ action: z.literal("record_result"), state: z.unknown(), task_id: z.string().min(1).max(64), status: z.enum(["completed", "blocked"]) }),
+      z.strictObject({ action: z.literal("record_critic"), state: z.unknown(), gate_passed: z.boolean() }),
+      z.strictObject({ action: z.literal("record_verification"), state: z.unknown(), passed: z.boolean() }),
+      z.strictObject({ action: z.literal("next_wave"), state: z.unknown() })
+    ])
+  }, async input => {
+    try { return result(orchestrateWorkerRun(input as Parameters<typeof orchestrateWorkerRun>[0])); }
+    catch (error) { return failure(error); }
   });
 
   server.registerTool("audit_reconnaissance", {
