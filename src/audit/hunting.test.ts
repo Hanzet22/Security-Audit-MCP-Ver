@@ -74,7 +74,7 @@ test("consolidates a source-only covered result and validates it upstream", () =
     }]
   });
   assert.equal(consolidated.validation.valid, true);
-  assert.equal(consolidated.ledger.find((u: any) => u.coverage_id === assignment.coverage_id).status, "covered");
+  assert.equal(consolidated.ledger.find((u: any) => u.coverage_id === assignment.coverage_id)?.status, "covered");
 });
 
 test("rejects local evidence unless the parent confirms artifact promotion", () => {
