@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { prepareCloudflareReconnaissance } from "./reconnaissance.js";
+import { prepareCloudflareHuntingWave } from "./hunting.js";
 import {
   validateCloudflareCoverageCritic,
   validateWorkerTask,
@@ -36,7 +37,7 @@ const task = {
 };
 
 test("critic passes only after every canonical coverage ID is examined", () => {
-  const current = ledger().map((unit: any) => ({ ...unit, status: "deferred" }));
+  const current = prepareCloudflareHuntingWave({ ledger: ledger(), max_hunters: 0 }).ledger;
   const ids = current.map((unit: any) => unit.coverage_id);
   const acceptedDeferred = ids.map((coverage_id: string) => ({ coverage_id, reason: "Explicitly deferred for this test." }));
   const complete = validateCloudflareCoverageCritic({ ledger: current, review: {
@@ -75,7 +76,7 @@ test("critic rejects invented existing IDs and unsafe paths in proposed missing 
 
 test("critic cannot pass while deferred coverage lacks explicit acceptance", () => {
   const recon = ledger();
-  const deferredLedger = recon.map((unit: any) => ({ ...unit, status: "deferred" }));
+  const deferredLedger = prepareCloudflareHuntingWave({ ledger: recon, max_hunters: 0 }).ledger;
   const ids = deferredLedger.map((unit: any) => unit.coverage_id);
   const review = {
     reviewer_id: "critic-defer",
