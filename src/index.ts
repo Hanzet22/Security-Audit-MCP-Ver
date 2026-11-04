@@ -23,6 +23,7 @@ import {
   validateCloudflareFindings
 } from "./audit/upstream.js";
 import { prepareCloudflareReconnaissance } from "./audit/reconnaissance.js";
+import { consolidateCloudflareHunterResults, prepareCloudflareHuntingWave } from "./audit/hunting.js";
 
 const API_ROOT = "https://api.github.com";
 const MAX_FILE_BYTES = 300_000;
@@ -321,6 +322,34 @@ function createServer(): McpServer {
         phase: 1,
         ...prepareCloudflareReconnaissance(input)
       });
+    } catch (error) { return failure(error); }
+  });
+
+  server.registerTool("cloudflare_hunting_wave_prepare", {
+    description: "Cloudflare Skill Phase 2 parent-side planner: validate a canonical ledger, rank planned units deterministically, assign a bounded wave, and explicitly defer untouched units. Does not spawn hunters.",
+    inputSchema: z.object({
+      ledger: z.array(z.unknown()).max(10000),
+      max_hunters: z.number().int().min(0).max(100),
+      changed_paths: z.array(z.string().min(1).max(500)).max(5000).optional(),
+      prior_gap_ids: z.array(z.string().min(1).max(65536)).max(10000).optional()
+    })
+  }, async input => {
+    try {
+      return result(prepareCloudflareHuntingWave(input as Parameters<typeof prepareCloudflareHuntingWave>[0]));
+    } catch (error) { return failure(error); }
+  });
+
+  server.registerTool("cloudflare_hunter_results_consolidate", {
+    description: "Cloudflare Skill Phase 2 parent-side consolidator: validate structured hunter unit results, ownership, source/local checks and parent-promoted artifact paths, then update only assigned ledger units. Does not execute targets or promote artifacts.",
+    inputSchema: z.object({
+      ledger: z.array(z.unknown()).max(10000),
+      assigned_coverage_ids: z.array(z.string().min(1).max(65536)).max(10000),
+      results: z.array(z.unknown()).max(100),
+      promoted_artifacts: z.array(z.string().min(1).max(1000)).max(10000).optional()
+    })
+  }, async input => {
+    try {
+      return result(consolidateCloudflareHunterResults(input as Parameters<typeof consolidateCloudflareHunterResults>[0]));
     } catch (error) { return failure(error); }
   });
 
