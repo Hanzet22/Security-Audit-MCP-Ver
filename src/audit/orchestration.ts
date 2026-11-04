@@ -133,6 +133,9 @@ export function validateWorkerResult(input: { task: WorkerTask; result: WorkerRe
   }
   if (!Array.isArray(result.evidence_refs) || !unique(result.evidence_refs) ||
       !result.evidence_refs.every(ref => typeof ref === "string" && ref.trim())) throw new Error("evidence_refs must be unique non-empty references.");
+  if (result.status === "completed" && (result.reviewed_paths.length === 0 || result.evidence_refs.length === 0)) {
+    throw new Error("Completed worker results require at least one owned reviewed path and one evidence reference.");
+  }
   if (!Array.isArray(result.blockers) || (result.status === "completed" && result.blockers.length > 0) ||
       (result.status === "blocked" && result.blockers.length === 0)) throw new Error("Completed results cannot have blockers; blocked results require blockers.");
   return { valid: true, task_id: result.task_id, worker_id: result.worker_id, status: result.status, reviewed_paths: [...result.reviewed_paths], evidence_refs: [...result.evidence_refs], summary: result.summary, blockers: [...result.blockers] };
@@ -166,7 +169,7 @@ export function orchestrateWorkerRun(input:
     }
     return {
       state: { version: "1.0", run_id: input.run_id, phase: "hunting", assignments: input.assignments.map(item => ({ ...item, status: "assigned" as const })), critic_gate_passed: false, verification_passed: false, history: ["run_initialized"] },
-      next_action: "Collect exactly one validated result for every assigned task.",
+      next_action: "Collect each worker result, validate it with worker_result_contract_validate, then record its status.",
       execution_mode: "caller_managed",
       limitations: ["The orchestrator is a stateless workflow controller; it does not create threads, processes, agents, queues, or background jobs."]
     };
