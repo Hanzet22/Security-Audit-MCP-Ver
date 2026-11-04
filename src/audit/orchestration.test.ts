@@ -72,6 +72,50 @@ test("critic rejects invented existing IDs and unsafe paths in proposed missing 
   }}), /safe unique starting_paths/);
 });
 
+test("critic cannot pass while deferred coverage lacks explicit acceptance", () => {
+  const recon = ledger();
+  const deferredLedger = recon.map((unit: any) => ({ ...unit, status: "deferred" }));
+  const ids = deferredLedger.map((unit: any) => unit.coverage_id);
+  const review = {
+    reviewer_id: "critic-defer",
+    reviewed_at: "2026-11-04T08:00:00Z",
+    architecture_refs: ["architecture.md#MCP-entrypoints"],
+    examined_coverage_ids: ids,
+    missing_units: [],
+    reassign_ids: [],
+    accepted_deferred_ids: [],
+    unresolved_questions: []
+  };
+  const unaccepted = validateCloudflareCoverageCritic({ ledger: deferredLedger, review });
+  assert.equal(unaccepted.gate_passed, false);
+  assert.deepEqual(unaccepted.unaccepted_deferred_ids, ids);
+
+  const accepted = validateCloudflareCoverageCritic({
+    ledger: deferredLedger,
+    review: { ...review, accepted_deferred_ids: ids.map((coverage_id: string) => ({ coverage_id, reason: "Explicitly deferred by budget." })) }
+  });
+  assert.equal(accepted.gate_passed, true);
+  assert.deepEqual(accepted.unaccepted_deferred_ids, []);
+});
+
+test("critic rejects accepting non-deferred coverage as deferred", () => {
+  const current = ledger();
+  const ids = current.map((unit: any) => unit.coverage_id);
+  assert.throws(() => validateCloudflareCoverageCritic({
+    ledger: current,
+    review: {
+      reviewer_id: "critic-defer",
+      reviewed_at: "2026-11-04T08:00:00Z",
+      architecture_refs: ["architecture.md"],
+      examined_coverage_ids: ids,
+      missing_units: [],
+      reassign_ids: [],
+      accepted_deferred_ids: [{ coverage_id: ids[0], reason: "Not actually deferred." }],
+      unresolved_questions: []
+    }
+  }), /only accept ledger units already marked deferred/);
+});
+
 test("worker task and result contracts enforce identity and path ownership", () => {
   assert.equal(validateWorkerTask(task).valid, true);
   assert.equal(validateWorkerResult({ task, result: {
