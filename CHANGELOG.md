@@ -19,7 +19,7 @@ All notable project changes are documented here.
 ### Added
 - MCP server factory and dedicated stdio entry point.
 - In-process MCP client/server integration smoke test.
-- Integration regression coverage for malformed worker-task inputs, nested task contracts, and hunter results missing required checks.
+- Integration regression coverage for empty and duplicate worker-task scopes, unsafe worker identifiers, malformed nested task contracts, duplicate orchestration assignments, and hunter results missing required checks.
 - Structured reconnaissance, hunting, coverage, findings, verification, and reporting workflow tools.
 - Stateless caller-managed worker and critic orchestration contracts.
 - GitHub API response boundary protections, including URL validation, bounded response reads, content-type checks, timeouts, and sanitized upstream errors.
@@ -27,6 +27,7 @@ All notable project changes are documented here.
 
 ### Changed
 - README documentation now describes the 18 exposed MCP tools and the explicit, non-autonomous workflow model.
+- Add contributor guidance and a release checklist covering CI, security review, SBOM handling, version consistency, and publication.
 - Document the current stdio-only transport, GitHub token handling, fixed API/resource bounds, and caller-supplied evidence trust boundaries.
 - CI now exercises supported Node.js LTS lines 22, 24, and 26 and uses `npm ci` with the committed npm-generated lockfile.
 
