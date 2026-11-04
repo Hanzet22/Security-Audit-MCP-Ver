@@ -64,6 +64,11 @@ export function prepareCloudflareReconnaissance(input: {
   if (new Set(input.scope_paths).size !== input.scope_paths.length) {
     throw new Error("scope_paths must not contain duplicates.");
   }
+  const companionFiles = input.selected_companion_files ?? [];
+  if (!companionFiles.every(isCloudflareSafeRelativePath) || new Set(companionFiles).size !== companionFiles.length) {
+    throw new Error("selected_companion_files must contain unique safe repository-relative paths.");
+  }
+  const scopeSet = new Set(input.scope_paths);
   if (input.profile === "quick" && input.coverage_units.some(unit =>
     unit.canonical_refs.subsystem !== "profile/quick/all-in-scope-subsystems" || unit.canonical_refs.lifecycle !== undefined
   )) {
@@ -114,7 +119,7 @@ export function prepareCloudflareReconnaissance(input: {
     `- Repository: ${input.repository}`,
     `- Source ref: ${input.source_ref}`,
     `- Profile: ${input.profile}`,
-    `- Scope: ${input.scope_paths.length ? input.scope_paths.join(", ") : "all discovered paths"}`,
+    `- Scope: ${input.scope_paths.length ? `${input.scope_paths.length} explicit repository paths` : "all discovered paths"}`,
     `- Prior-run input: ${metadata.prior_run_handling}`,
     "",
     ...allFacts,
@@ -132,8 +137,10 @@ export function prepareCloudflareReconnaissance(input: {
   }
 
   const ledger = budgetBlocked ? [] : input.coverage_units.map(unit => {
-    const inScope = input.scope_paths.length === 0 ||
-      unit.starting_paths.some(path => input.scope_paths.includes(path));
+    const startingPaths = input.scope_paths.length === 0
+      ? unit.starting_paths
+      : unit.starting_paths.filter(path => scopeSet.has(path));
+    const inScope = startingPaths.length > 0;
     const refs = unit.canonical_refs;
     const priorStatus = "none";
     const lifecycleFields = refs.lifecycle === undefined ? {} : { lifecycle: unit.lifecycle ?? refs.lifecycle };
@@ -145,7 +152,7 @@ export function prepareCloudflareReconnaissance(input: {
       subsystem: unit.subsystem,
       attack_class: unit.attack_class,
       ...lifecycleFields,
-      starting_paths: unit.starting_paths,
+      starting_paths: inScope ? startingPaths : unit.starting_paths,
       ordinary_attack_class_block: unit.ordinary_attack_class_block,
       selected_companion_blocks: unit.selected_companion_blocks,
       excluded_blocks: unit.excluded_blocks,
