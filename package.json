@@ -13,7 +13,7 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "npm run test:unit && npm run test:upstream",
-    "test:unit": "tsx --test src/audit/contracts.test.ts src/audit/upstream.test.ts src/audit/reconnaissance.test.ts src/audit/hunting.test.ts",
+    "test:unit": "tsx --test src/audit/contracts.test.ts src/audit/upstream.test.ts src/audit/reconnaissance.test.ts src/audit/hunting.test.ts src/audit/orchestration.test.ts",
     "test:upstream": "node --test vendor/cloudflare-security-audit-skill/validate-coverage-ledger.test.cjs vendor/cloudflare-security-audit-skill/validate-findings.test.cjs"
   },
   "dependencies": {
