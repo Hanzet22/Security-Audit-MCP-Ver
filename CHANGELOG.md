@@ -8,6 +8,7 @@ All notable project changes are documented here.
 - Reject malformed repository identifiers, dot-segment file paths, invalid base64 content, and invalid UTF-8 source files at the GitHub read boundary.
 - Expand heuristic evidence redaction for common bearer/basic auth, GitHub, Slack, GitLab, Google, Stripe, AWS access-key, JWT, and URL-credential formats.
 - Ensure report generation and independent verification reject duplicate finding fingerprints and unrelated reviewer records.
+- Escape untrusted finding and scout-report text before emitting Markdown reports and architecture summaries.
 - Require every deferred coverage unit to be explicitly accepted by the critic before the next-wave gate can pass.
 - Classify vendored upstream material and package manifests as dependencies rather than generated output.
 - Raise the minimum Node.js runtime to 22 because Node.js 20 reached end of life.
