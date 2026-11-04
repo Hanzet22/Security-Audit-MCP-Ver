@@ -108,10 +108,7 @@ export function validateFindings(input: unknown) {
   if (!parsed.success) {
     return {
       valid: false,
-      errors: parsed.error.issues.map(issue => ({
-        path: issue.path.join("."),
-        message: issue.message
-      })),
+      errors: parsed.error.issues.map(issue => `${issue.path.join(".")}: ${issue.message}`),
       findings: []
     };
   }
