@@ -25,6 +25,7 @@ All notable project changes are documented here.
 
 ### Changed
 - README documentation now describes the 18 exposed MCP tools and the explicit, non-autonomous workflow model.
+- Document the current stdio-only transport, GitHub token handling, fixed API/resource bounds, and caller-supplied evidence trust boundaries.
 - CI now exercises supported Node.js LTS lines 22, 24, and 26 and uses `npm ci` with the committed npm-generated lockfile.
 
 ### Security
