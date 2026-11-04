@@ -38,7 +38,7 @@ jobs:
       contents: write # required for GitHub Dependency Submission API
     steps:
       - name: Checkout the code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
