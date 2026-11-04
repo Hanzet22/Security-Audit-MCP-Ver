@@ -2,6 +2,16 @@
 
 All notable project changes are documented here.
 
+## [0.3.1] - 2026-11-04 — RELEASED
+
+### Added
+- Dedicated `SETUP.md` covering installation and configuration for Claude Code, OpenAI Codex CLI, Cursor and Visual Studio Code.
+- Four-language README navigation and setup documentation links for English (EU), English (US), Bahasa Indonesia and Malay (Singapore).
+
+### Changed
+- Bump the package version to 0.3.1 and keep `package-lock.json` in sync.
+- Clarify the local STDIO-only installation and client configuration guidance.
+
 ## [0.3.0] - 2026-11-04
 
 ### Security and correctness
@@ -34,5 +44,3 @@ All notable project changes are documented here.
 ### Security
 - Repository source inspection remains read-only; target source code is not executed and deployed endpoints are not probed.
 - Upstream Cloudflare material remains attributed under its MIT license in the vendor directory.
-
-> This dated entry describes the v0.3.0 release candidate. The version is not published until the `v0.3.0` Git tag and corresponding GitHub Release are created after all release gates pass.
