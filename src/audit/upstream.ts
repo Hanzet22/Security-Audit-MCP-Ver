@@ -9,6 +9,7 @@ const require = createRequire(import.meta.url);
 const coverageValidator = require("../../vendor/cloudflare-security-audit-skill/validate-coverage-ledger.cjs") as {
   LIMITS: { inputBytes: number; units: number };
   canonicalCoverageId: (refs: Record<string, string>) => string;
+  isSafeRelativePath: (value: string) => boolean;
   validateDocument: (ledger: unknown) => string[];
 };
 const findingsValidator = require("../../vendor/cloudflare-security-audit-skill/validate-findings.cjs") as {
@@ -71,4 +72,8 @@ export function validateCloudflareFindings(findings: unknown) {
     errors,
     finding_count: Array.isArray(findings) ? findings.length : null
   };
+}
+
+export function isCloudflareSafeRelativePath(value: string): boolean {
+  return coverageValidator.isSafeRelativePath(value);
 }
