@@ -131,6 +131,10 @@ export function verifyIndependentReview(
   findings: Finding[],
   checks: Array<{ fingerprint: string; agrees: boolean; evidence_matches: boolean; rationale: string }>
 ) {
+  const findingIds = findings.map(finding => finding.fingerprint);
+  const duplicateFindings = findingIds.filter((fingerprint, index, all) => all.indexOf(fingerprint) !== index);
+  const knownFindings = new Set(findingIds);
+  const unknownReviews = checks.filter(check => !knownFindings.has(check.fingerprint)).map(check => check.fingerprint);
   const byFingerprint = new Map(checks.map(check => [check.fingerprint, check]));
   const missing: string[] = [];
   const disagreements: string[] = [];
@@ -152,9 +156,12 @@ export function verifyIndependentReview(
     .filter((fingerprint, index, all) => all.indexOf(fingerprint) !== index);
 
   return {
-    passed: missing.length === 0 && disagreements.length === 0 && duplicateChecks.length === 0,
+    passed: missing.length === 0 && disagreements.length === 0 &&
+      duplicateChecks.length === 0 && duplicateFindings.length === 0 && unknownReviews.length === 0,
     missing_reviews: [...new Set(missing)],
     disagreements: [...new Set(disagreements)],
-    duplicate_review_records: [...new Set(duplicateChecks)]
+    duplicate_review_records: [...new Set(duplicateChecks)],
+    duplicate_finding_records: [...new Set(duplicateFindings)],
+    unknown_review_records: [...new Set(unknownReviews)]
   };
 }
