@@ -120,6 +120,8 @@ test("critic rejects accepting non-deferred coverage as deferred", () => {
 
 test("worker task and result contracts enforce identity and path ownership", () => {
   assert.equal(validateWorkerTask(task).valid, true);
+  assert.throws(() => validateWorkerTask({ ...task, coverage_ids: [] }), /coverage_ids must be non-empty/);
+  assert.throws(() => validateWorkerTask({ ...task, allowed_paths: [] }), /allowed_paths must be non-empty/);
   assert.equal(validateWorkerResult({ task, result: {
     contract_version: "1.0", task_id: "task-1", worker_id: "hunter-1", status: "completed",
     reviewed_paths: ["src/index.ts"], evidence_refs: ["src/index.ts:10-20"],
@@ -137,6 +139,21 @@ test("worker task and result contracts enforce identity and path ownership", () 
     contract_version: "1.0", task_id: "task-1", worker_id: "different-worker", status: "completed",
     reviewed_paths: ["src/index.ts"], evidence_refs: [], summary: "Wrong worker.", blockers: []
   }}), /identity does not match/);
+});
+
+test("worker result rejects malformed blocker records even when called outside the MCP schema", () => {
+  assert.throws(() => validateWorkerResult({ task, result: {
+    contract_version: "1.0", task_id: "task-1", worker_id: "hunter-1", status: "blocked",
+    reviewed_paths: [], evidence_refs: [], summary: "Blocked.", blockers: ["   "]
+  } as any }), /Blockers must be non-empty strings/);
+});
+
+test("orchestrator marks caller-held state as unsigned and non-authoritative", () => {
+  const initialized = orchestrateWorkerRun({ action: "initialize", run_id: "run-trust", assignments: [
+    { task_id: "task-trust", worker_id: "worker-trust", coverage_id: "cov-trust" }
+  ]});
+  assert.equal(initialized.trust_model, "caller_supplied_unsigned_state");
+  assert.match(initialized.security_note, /altered or replayed/);
 });
 
 test("orchestrator waits for every result before critic", () => {
