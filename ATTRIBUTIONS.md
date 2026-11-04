@@ -13,9 +13,12 @@ The MCP server and adapter layer are independently written. The following upstre
 - `validate-findings.cjs`
 - `validate-coverage-ledger.cjs`
 - `report-schema.json`
-- `LICENSE`
+- `LICENSE`, `UPSTREAM.md`
+- `SKILL.md`, `RECONNAISSANCE.md`, `HUNTING.md`, `VALIDATION-AND-REPORTING.md`
+- `ATTACK-CLASSES.md` and the companion guidance files `AI-AND-LLM.md`, `CLIENT-SIDE.md`, `CLOUD-AND-DEPLOYMENT.md`, `DATA-ISOLATION-AND-LIFECYCLE.md`, `DESKTOP-MOBILE-AND-LOCAL-IPC.md`, `MEMORY-SAFETY-AND-BINARY.md`, `PROTOCOLS-RPC-AND-MESSAGING.md`, `RESOURCE-EXHAUSTION-AND-AVAILABILITY.md`, `SUPPLY-CHAIN-AND-RELEASE.md`, and `WEB-PROTOCOL-AND-AUTH.md`
+- `validate-coverage-ledger.test.cjs`, `validate-findings.test.cjs`
 
-These files remain under the upstream MIT License. The upstream license is preserved in the vendor directory. The surrounding MCP integration, tests, and project code remain under this repository's AGPL-3.0-or-later license.
+All files under `vendor/cloudflare-security-audit-skill/` that originate upstream remain under the upstream MIT License. The upstream license is preserved in the vendor directory. The surrounding MCP integration, tests, and project code remain under this repository's AGPL-3.0-or-later license.
 
 ## Relationship
 
