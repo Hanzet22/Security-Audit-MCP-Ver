@@ -131,8 +131,10 @@ The MCP exposes `cloudflare_coverage_critic`, `worker_task_contract_validate`,
 
 These tools validate caller-supplied review and worker records and enforce the
 sequence: assigned work → complete worker results → full-ledger critic →
-independent verification → next-wave gate. They are stateless workflow
-controls, not an autonomous agent runtime: this server does not spawn workers,
+independent verification → next-wave gate. Orchestration state is caller-held,
+unsigned JSON and can be altered or replayed; the gates check workflow
+consistency, not authorization or proof of independent work. They are stateless
+workflow controls, not an autonomous agent runtime: this server does not spawn workers,
 create background jobs, persist queues, or independently authenticate evidence.
 A host application or external orchestrator must execute workers and supply
 their structured results. Source inspection remains read-only; target code is
