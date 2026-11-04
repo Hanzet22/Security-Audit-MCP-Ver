@@ -4,7 +4,7 @@ This guide covers installing Security-Audit-MCP-Ver and connecting it to MCP-com
 
 ## Requirements
 
-- Node.js 22 or newer.
+- Node.js 22 or newer (versions below 22 are rejected by the server).
 - Git.
 - An MCP-compatible client such as Claude Code, OpenAI Codex CLI, Cursor or Visual Studio Code.
 
@@ -120,7 +120,7 @@ For clients supporting an `env` field, the configuration shape is:
 - Use the client's MCP status view to confirm the server is connected.
 - Confirm the client can discover the server's tools.
 
-If the server does not start, check that Node.js 22+ is installed, `npm run build` completed successfully, the configured absolute path is correct, and the client can find `node`.
+If the server does not start, check that Node.js 22+ is installed (Node.js 21 and older are rejected), `npm run build` completed successfully, the configured absolute path is correct, and the client can find `node`.
 
 ## Transport and security boundaries
 
