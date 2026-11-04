@@ -1,19 +1,28 @@
 # Security-Audit-MCP-Ver
 
-Read-only source-code security review tools exposed through the Model Context Protocol (MCP).
+Read-only, evidence-led source-code security audit tools exposed through the Model Context Protocol (MCP).
 
 This is an independent implementation inspired by the workflow in [Cloudflare Security Audit Skill](https://github.com/cloudflare/security-audit-skill). It is not affiliated with or endorsed by Cloudflare.
 
 ## Current status
 
-**Early scaffold (v0.1.0).** The server currently provides:
+**v0.2.0 — MCP SDK v2 migration and structured audit workflow scaffold.**
 
-- `repository_inspect` — read repository metadata.
-- `repository_tree` — list repository paths.
-- `repository_read_file` — read a bounded text file.
-- `source_security_review` — run basic heuristic checks against source text supplied by the caller.
+The server currently exposes:
 
-The heuristic reviewer emits `needs_validation` leads only. It does not confirm vulnerabilities, assign severity, execute code, or contact deployed application endpoints.
+| Tool | Workflow phase | Purpose |
+|---|---:|---|
+| `repository_inspect` | Recon | Read GitHub repository metadata |
+| `repository_tree` | Recon | List bounded repository paths |
+| `repository_read_file` | Recon | Read one bounded text file |
+| `audit_reconnaissance` | 1 | Inventory and classify repository files |
+| `source_security_review` | 3 | Generate heuristic candidate leads |
+| `audit_coverage_validate` | 2 | Validate the coverage ledger |
+| `audit_findings_validate` | 4 | Validate structured finding records |
+| `audit_independent_verify` | 5 | Compare findings with separately supplied reviewer checks |
+| `audit_report_generate` | 6 | Generate target-neutral Markdown reports |
+
+The workflow is intentionally explicit: reconnaissance inventory is not a completed review; heuristic matches are not confirmed vulnerabilities; a separate reviewer must provide verification checks; and incomplete coverage or verification keeps the run marked incomplete.
 
 ## Requirements
 
@@ -25,6 +34,7 @@ The heuristic reviewer emits `needs_validation` leads only. It does not confirm 
 
 ```bash
 npm install
+npm run typecheck
 npm run build
 npm start
 ```
@@ -37,7 +47,7 @@ npm run dev
 
 ## MCP host configuration
 
-Example for an MCP host that launches a local Node process:
+Example for a host that launches a local Node process:
 
 ```json
 {
@@ -53,27 +63,33 @@ Example for an MCP host that launches a local Node process:
 }
 ```
 
-Use a fine-grained GitHub token with read-only repository Contents and Metadata permissions. Do not use a personal access token with write permissions for this read-only server.
+Use a fine-grained GitHub token with read-only repository Contents and Metadata permissions. Do not use a token with write permissions for this read-only server.
 
 ## Safety model
 
-- Repository operations use GitHub's read APIs only.
+- GitHub access uses read APIs only.
 - The server never clones or executes target repository code.
 - No deployed endpoint, production service, or third-party infrastructure is probed.
-- Source pattern matches are heuristic leads, not proof of a vulnerability.
-- Findings remain `needs_validation` until independently validated with sufficient source context.
+- Repository URL parsing accepts GitHub HTTPS URLs only.
+- Source pattern matches are candidate leads, not proof of exploitability.
+- Potential credential evidence is redacted before candidate output.
+- Only confirmed records may contain severity; `needs_validation` records cannot.
+- The server does not spawn independent sub-agents. Phase 5 requires separately supplied reviewer checks.
+- Reports are marked `incomplete` unless coverage and independent-verification gates pass.
 - Do not submit secrets or private source code unless you are authorized to share them.
 
-A future sandboxed audit runner would require operating-system-enforced isolation, no external network access, restricted environment variables, resource limits, and scratch-only writes. This initial MCP server does not implement that runner.
+A future sandboxed runner would require OS-enforced isolation, no external network access, restricted environment variables, resource limits, and scratch-only writes. This project does not implement such a runner.
 
-## Development roadmap
+## Workflow model
 
-1. Repository reconnaissance and bounded source retrieval.
-2. Coverage ledger and explicit review scope.
-3. Heuristic candidate generation with source locations.
-4. Independent validation workflow and structured finding schema.
-5. Evidence consistency checks.
-6. Target-neutral Markdown and JSON reports.
+1. **Reconnaissance:** map repository metadata, paths and file categories.
+2. **Coverage planning:** create and validate one ledger entry for every in-scope path.
+3. **Candidate generation:** inspect source and produce heuristic leads with file/line evidence.
+4. **Structured findings:** validate records, verdicts, evidence and unique fingerprints.
+5. **Independent verification:** compare findings against a separate reviewer’s checks.
+6. **Reporting:** generate `REPORT.md`, `FINDINGS-DETAIL.md`, and `NEEDS-VALIDATION.md`; disclose incomplete runs.
+
+The current implementation provides workflow primitives, not an autonomous six-phase audit agent. It does not claim that a complete audit has occurred merely because tools were called.
 
 ## License
 
