@@ -104,3 +104,18 @@ The current implementation provides workflow primitives, not an autonomous six-p
 GNU Affero General Public License v3.0 or later. See [LICENSE](./LICENSE).
 
 Upstream inspiration and attribution details: [ATTRIBUTIONS.md](./ATTRIBUTIONS.md).
+
+
+## Parent-side critic and worker orchestration
+
+The MCP exposes `cloudflare_coverage_critic`, `worker_task_contract_validate`,
+`worker_result_contract_validate`, and `worker_orchestrator_step`.
+
+These tools validate caller-supplied review and worker records and enforce the
+sequence: assigned work → complete worker results → full-ledger critic →
+independent verification → next-wave gate. They are stateless workflow
+controls, not an autonomous agent runtime: this server does not spawn workers,
+create background jobs, persist queues, or independently authenticate evidence.
+A host application or external orchestrator must execute workers and supply
+their structured results. Source inspection remains read-only; target code is
+not executed and deployed endpoints are not probed.
