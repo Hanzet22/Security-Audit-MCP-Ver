@@ -74,6 +74,18 @@ test("MCP server initializes, discovers all tools, and executes a contract tool"
     });
     assert.equal(emptyPathsTask.isError, true);
 
+    const duplicateCoverageTask = await client.callTool({
+      name: "worker_task_contract_validate",
+      arguments: { ...validWorkerTask, coverage_ids: ["coverage-1", "coverage-1"] }
+    });
+    assert.equal(duplicateCoverageTask.isError, true);
+
+    const unsafeWorkerIdTask = await client.callTool({
+      name: "worker_task_contract_validate",
+      arguments: { ...validWorkerTask, worker_id: "../worker" }
+    });
+    assert.equal(unsafeWorkerIdTask.isError, true);
+
     const malformedNestedTask = await client.callTool({
       name: "worker_result_contract_validate",
       arguments: {
@@ -113,6 +125,28 @@ test("MCP server initializes, discovers all tools, and executes a contract tool"
       }
     });
     assert.equal(hunterResultWithoutChecks.isError, true);
+
+    const duplicateAssignmentState = await client.callTool({
+      name: "worker_orchestrator_step",
+      arguments: {
+        action: "record_result",
+        state: {
+          version: "1.0",
+          run_id: "integration-run",
+          phase: "hunting",
+          assignments: [
+            { task_id: "task-a", worker_id: "worker-a", coverage_id: "coverage-a", status: "assigned" },
+            { task_id: "task-b", worker_id: "worker-a", coverage_id: "coverage-b", status: "assigned" }
+          ],
+          critic_gate_passed: false,
+          verification_passed: false,
+          history: ["run_initialized"]
+        },
+        task_id: "task-a",
+        status: "completed"
+      }
+    });
+    assert.equal(duplicateAssignmentState.isError, true);
 
     const rejectedUrl = await client.callTool({
       name: "repository_inspect",
