@@ -59,7 +59,9 @@ export function prepareCloudflareReconnaissance(input: {
 }) {
   const minimum = 4 + (input.profile === "quick" ? 1 : 2) + 1;
   const budgetBlocked = input.budget !== null && input.budget < minimum;
-  if ((input.prior_run_paths ?? []).length > 0) {\n    throw new Error("Prior-run paths alone are not prior evidence. Load and validate the actual prior run-metadata.json, coverage-ledger.json, and findings.json before supplying carry-forward data.");\n  }\n  const compatiblePriorRuns = false;
+  if ((input.prior_run_paths ?? []).length > 0) {
+    throw new Error("Prior-run paths alone are not prior evidence. Load and validate the actual prior run-metadata.json, coverage-ledger.json, and findings.json before supplying carry-forward data.");
+  }
   const metadata = {
     run_id: input.run_id,
     repo: input.repository,
