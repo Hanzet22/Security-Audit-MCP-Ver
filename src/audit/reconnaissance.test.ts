@@ -40,6 +40,21 @@ function input(overrides = {}) {
   };
 }
 
+test("escapes untrusted scout facts before writing architecture markdown", () => {
+  const result = prepareCloudflareReconnaissance(input({
+    scout_reports: {
+      ...scouts,
+      product_stack: [{
+        statement: "[click](https://example.invalid)\\n## forged heading <img src=x>",
+        refs: ["src/index.ts:1"]
+      }]
+    }
+  }));
+  assert.equal(result.architecture_md.includes("[click]("), false);
+  assert.equal(result.architecture_md.includes("## forged heading"), false);
+  assert.equal(result.architecture_md.includes("<img"), false);
+});
+
 test("prepares a valid upstream canonical reconnaissance ledger", () => {
   const result = prepareCloudflareReconnaissance(input());
   assert.equal(result.coverage_validation.valid, true);
