@@ -17,8 +17,15 @@ const findingsValidator = require("../../vendor/cloudflare-security-audit-skill/
 };
 const reportSchema: unknown = require("../../vendor/cloudflare-security-audit-skill/report-schema.json");
 
-export function canonicalCloudflareCoverageId(refs: Record<string, string>): string {
-  return coverageValidator.canonicalCoverageId(refs);
+export function canonicalCloudflareCoverageId(refs: { surface: string; boundary: string; subsystem: string; attack_class: string; lifecycle?: string | undefined }): string {
+  const canonicalRefs: Record<string, string> = {
+    surface: refs.surface,
+    boundary: refs.boundary,
+    subsystem: refs.subsystem,
+    attack_class: refs.attack_class,
+    ...(refs.lifecycle === undefined ? {} : { lifecycle: refs.lifecycle })
+  };
+  return coverageValidator.canonicalCoverageId(canonicalRefs);
 }
 
 function serializedInputSize(value: unknown): number {
