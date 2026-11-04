@@ -57,6 +57,8 @@ For local development:
 npm run dev
 ```
 
+The production stdio entry point is `dist/stdio.js`. The exported `createServer()` factory in `src/index.ts` is also used by the in-process MCP integration smoke test; importing it does not start a stdio process.
+
 ## MCP host configuration
 
 Example for a host that launches a local Node process:
@@ -66,7 +68,7 @@ Example for a host that launches a local Node process:
   "mcpServers": {
     "security-audit-mcp-ver": {
       "command": "node",
-      "args": ["/absolute/path/to/Security-Audit-MCP-Ver/dist/index.js"],
+      "args": ["/absolute/path/to/Security-Audit-MCP-Ver/dist/stdio.js"],
       "env": {
         "GITHUB_TOKEN": "OPTIONAL_READ_ONLY_TOKEN"
       }
