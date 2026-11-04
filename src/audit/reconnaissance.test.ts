@@ -74,3 +74,18 @@ test("rejects invalid or colliding canonical coverage references", () => {
 test("rejects prior-run path names without validated prior artifacts", () => {
   assert.throws(() => prepareCloudflareReconnaissance(input({ prior_run_paths: ["runs/run-001/coverage-ledger.json"] })), /Prior-run paths alone are not prior evidence/);
 });
+
+test("enforces Cloudflare quick-profile canonical subsystem coarsening", () => {
+  const quickUnit = {
+    ...unit,
+    canonical_refs: { ...unit.canonical_refs, subsystem: "profile/quick/all-in-scope-subsystems" }
+  };
+  const result = prepareCloudflareReconnaissance(input({ profile: "quick", coverage_units: [quickUnit] }));
+  assert.equal(result.coverage_validation.valid, true);
+  assert.throws(() => prepareCloudflareReconnaissance(input({ profile: "quick" })), /fixed canonical subsystem reference/);
+});
+
+test("rejects unsafe and duplicate scope paths", () => {
+  assert.throws(() => prepareCloudflareReconnaissance(input({ scope_paths: ["../outside"] })), /safe repository-relative paths/);
+  assert.throws(() => prepareCloudflareReconnaissance(input({ scope_paths: ["src/index.ts", "src/index.ts"] })), /must not contain duplicates/);
+});
