@@ -45,13 +45,15 @@ function parseRepo(input: string, ref?: string): RepoRef {
       throw new Error("Only standard HTTPS GitHub repository URLs without credentials or custom ports are accepted.");
     }
     if (url.search || url.hash) throw new Error("Repository URLs must not include query strings or fragments.");
-    parts = url.pathname.split("/").filter(Boolean);
+    const pathname = url.pathname.replace(/\/$/, "");
+    parts = pathname.slice(1).split("/");
     if (parts.at(-1)?.endsWith(".git")) parts[parts.length - 1] = parts.at(-1)!.slice(0, -4);
   } else {
-    parts = raw.replace(/\.git$/, "").split("/").filter(Boolean);
+    parts = raw.replace(/\.git$/, "").split("/");
   }
 
-  if (parts.length !== 2 || !/^[A-Za-z0-9_.-]+$/.test(parts[0] ?? "") || !/^[A-Za-z0-9_.-]+$/.test(parts[1] ?? "")) {
+  if (parts.length !== 2 || parts.some(part => !part || part === "." || part === "..") ||
+      !/^[A-Za-z0-9_.-]+$/.test(parts[0] ?? "") || !/^[A-Za-z0-9_.-]+$/.test(parts[1] ?? "")) {
     throw new Error("Repository must be owner/name or a GitHub repository URL.");
   }
   if (ref !== undefined && (!ref.trim() || ref.length > 200 || /[\u0000-\u001f\u007f]/.test(ref))) {
@@ -140,7 +142,8 @@ async function inspectRepo(repository: string, ref?: string) {
   const metadata = await github(base);
   const branch = parsed.ref ?? metadata.default_branch;
   const tree = await github(`${base}/git/trees/${encodeURIComponent(branch)}?recursive=1`);
-  const entries: Array<{ path: string; type: string; size: number | null }> = (tree.tree ?? []).slice(0, MAX_TREE_ITEMS).map((item: { path: string; type: string; size?: number | null }) => ({
+  if (!tree || !Array.isArray(tree.tree)) throw new Error("GitHub API returned an invalid repository tree.");
+  const entries: Array<{ path: string; type: string; size: number | null }> = tree.tree.slice(0, MAX_TREE_ITEMS).map((item: { path: string; type: string; size?: number | null }) => ({
     path: item.path as string,
     type: item.type as string,
     size: item.size ?? null
@@ -158,10 +161,12 @@ async function inspectRepo(repository: string, ref?: string) {
 }
 
 function categorize(path: string): "application" | "configuration" | "dependency" | "test" | "documentation" | "generated" | "unknown" {
-  if (/(^|\/)(dist|build|coverage|vendor)(\/|$)/i.test(path)) return "generated";
+  if (/(^|\/)(dist|build|coverage)(\/|$)/i.test(path)) return "generated";
+  if (/(^|\/)vendor(\/|$)/i.test(path) ||
+      /(^|\/)(package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|Cargo\.lock|go\.sum)$/i.test(path) ||
+      /(requirements.*\.txt)$/i.test(path)) return "dependency";
   if (/(^|\/)(test|tests|__tests__|spec)(\/|$)|\.(test|spec)\.[^.]+$/i.test(path)) return "test";
   if (/\.(md|mdx|rst|txt)$/i.test(path)) return "documentation";
-  if (/(package-lock|pnpm-lock|yarn\.lock|Cargo\.lock|go\.sum|requirements.*\.txt)/i.test(path)) return "dependency";
   if (/\.(json|ya?ml|toml|ini|conf|config)$/i.test(path) || /(^|\/)(\.github|\.npmrc|\.nvmrc)(\/|$)/i.test(path)) return "configuration";
   if (/\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|java|kt|php|rb|cs|swift|c|cc|cpp|h|hpp|sql)$/i.test(path)) return "application";
   return "unknown";
@@ -169,7 +174,11 @@ function categorize(path: string): "application" | "configuration" | "dependency
 
 function redactEvidence(line: string): string {
   return line
-    .replace(/((?:api[_-]?key|secret|password|token)\s*[:=]\s*)(['"])[^'"]+\2/gi, "$1$2[REDACTED]$2")
+    .replace(/((?:api[_-]?key|secret|password|token|authorization|access[_-]?key|client[_-]?secret)\s*[:=]\s*)(?:"[^"\\r\\n]*"|'[^'\\r\\n]*'|[^\\s,;]+)/gi, "$1[REDACTED]")
+    .replace(/\\bBearer\\s+[A-Za-z0-9._~+\\/= -]+/gi, "Bearer [REDACTED]")
+    .replace(/\\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\\b/g, "[REDACTED]")
+    .replace(/\\bAKIA[0-9A-Z]{16}\\b/g, "[REDACTED]")
+    .replace(/\\beyJ[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}\\b/g, "[REDACTED]")
     .slice(0, 220);
 }
 
@@ -308,8 +317,10 @@ export function createServer(): McpServer {
     })
   }, async ({ repository, path, ref }) => {
     try {
-      if (path.startsWith("/") || path.split("/").some(part => part === ".." || part === "")) {
-        throw new Error("Absolute paths, empty path segments and parent-directory segments are not allowed.");
+      if (path.startsWith("/") || path.includes("\\") ||
+          /[\\u0000-\\u001f\\u007f]/.test(path) ||
+          path.split("/").some(part => part === "." || part === ".." || part === "")) {
+        throw new Error("Absolute paths, backslashes, control characters, dot segments and empty path segments are not allowed.");
       }
       const parsed = parseRepo(repository, ref);
       const suffix = parsed.ref ? `?ref=${encodeURIComponent(parsed.ref)}` : "";
@@ -318,7 +329,12 @@ export function createServer(): McpServer {
       if (Array.isArray(data) || data.type !== "file") throw new Error("The requested path is not a single file.");
       if ((data.size ?? 0) > MAX_FILE_BYTES) throw new Error("File exceeds the 300 KB read limit.");
       if (data.encoding !== "base64" || typeof data.content !== "string") throw new Error("GitHub did not return a supported text file.");
-      const content = Buffer.from(data.content.replace(/\n/g, ""), "base64").toString("utf8");
+      const base64 = data.content.replace(/\\s/g, "");
+      if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(base64)) {
+        throw new Error("GitHub returned invalid base64 file content.");
+      }
+      const bytes = Buffer.from(base64, "base64");
+      const content = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
       if (content.includes("\u0000")) throw new Error("Binary-looking content is not supported.");
       return result({ repository: `${parsed.owner}/${parsed.repo}`, path, size_bytes: data.size, content });
     } catch (error) { return failure(error); }
@@ -632,10 +648,17 @@ export function createServer(): McpServer {
         rationale: z.string().min(1).max(3000)
       })).max(1000)
     })
-  }, async ({ findings, checks }) => result({
-    phase: 5,
-    ...verifyIndependentReview(findings, checks)
-  }));
+  }, async ({ findings, checks }) => {
+    const findingsValidation = validateFindings(findings);
+    const verification = findingsValidation.valid
+      ? verifyIndependentReview(findings, checks)
+      : { passed: false, missing_reviews: [], disagreements: [], duplicate_review_records: [], duplicate_finding_records: [], unknown_review_records: [] };
+    return result({
+      phase: 5,
+      findings_validation: { valid: findingsValidation.valid, errors: findingsValidation.errors },
+      ...verification
+    });
+  });
 
   server.registerTool("audit_report_generate", {
     description: "Phase 6: validate coverage and separate reviewer checks, then generate target-neutral Markdown reports.",
@@ -656,11 +679,19 @@ export function createServer(): McpServer {
     })
   }, async ({ repository, scope, inventory_complete, scope_paths, coverage_ledger, findings, independent_checks, requested_status }) => {
     const coverage = validateCoverage(scope_paths, coverage_ledger);
-    const verification = verifyIndependentReview(findings, independent_checks);
+    const findingsValidation = validateFindings(findings);
+    const verification = findingsValidation.valid
+      ? verifyIndependentReview(findings, independent_checks)
+      : { passed: false, missing_reviews: [], disagreements: [], duplicate_review_records: [], duplicate_finding_records: [], unknown_review_records: [] };
     const coverageGate = coverage.valid && inventory_complete;
     return result({
-      ...generateReport(repository, scope, findings, coverageGate, verification.passed, requested_status),
-      gates: { inventory_complete, coverage, independent_verification: verification }
+      ...generateReport(repository, scope, findings, coverageGate, findingsValidation.valid && verification.passed, requested_status),
+      gates: {
+        inventory_complete,
+        coverage,
+        findings: { valid: findingsValidation.valid, errors: findingsValidation.errors },
+        independent_verification: verification
+      }
     });
   });
 
