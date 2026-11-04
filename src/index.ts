@@ -175,7 +175,13 @@ function generateReport(
       `- Description: ${item.description}`,
       ...item.evidence.map(ev => `- Evidence: ${ev.file}:${ev.line} — ${ev.description}`),
       ...item.trace.map(step => `- Trace (${step.kind}): ${step.file}:${step.line} — ${step.description}`),
+      item.verdict === "confirmed" ? `- Root cause: ${item.root_cause}` : `- Claimed root cause: ${item.claimed_root_cause}`,
+      item.verdict === "confirmed" ? `- Affected boundary: ${item.affected_boundary}` : "",
+      item.verdict === "confirmed" ? `- Impact: ${item.impact}` : "",
+      item.verdict === "confirmed" ? `- Severity: ${item.severity}; confidence: ${item.confidence}` : "",
       item.verdict === "confirmed" ? `- Remediation: ${item.remediation}` : "",
+      item.verdict === "rejected" ? `- Rejection reason: ${item.rejection_reason}` : "",
+      item.verdict === "needs_validation" ? `- Blockers: ${item.blockers.join("; ")}` : "",
       ""
     ].filter(Boolean).join("\n"))
   ].join("\n");
@@ -186,7 +192,13 @@ function generateReport(
     ...pending.map(item => `## ${item.title}\n\n${item.description}\n\nBlockers:\n${item.blockers.map(b => `- ${b}`).join("\n")}\n\nValidation plan: ${item.validation_plan}\n`)
   ].join("\n");
 
-  return { run_status: status, "REPORT.md": report, "FINDINGS-DETAIL.md": detail, "NEEDS-VALIDATION.md": needsValidation };
+  return {
+    run_status: status,
+    "findings.json": JSON.stringify(findings, null, 2),
+    "REPORT.md": report,
+    "FINDINGS-DETAIL.md": detail,
+    "NEEDS-VALIDATION.md": needsValidation
+  };
 }
 
 function createServer(): McpServer {
@@ -351,7 +363,7 @@ function createServer(): McpServer {
   }));
 
   server.registerTool("audit_findings_validate", {
-    description: "Phase 4: validate finding structure, evidence locations and unique fingerprints. Needs-validation records cannot carry severity.",
+    description: "Phase 4: validate finding structure, evidence fields and unique fingerprints. Needs-validation records cannot carry severity.",
     inputSchema: z.object({
       findings: z.array(z.unknown()).max(1000)
     })
@@ -386,7 +398,8 @@ function createServer(): McpServer {
     inputSchema: z.object({
       repository: z.string().min(1).max(300),
       scope: z.string().min(1).max(2000),
-      scope_paths: z.array(z.string().min(1)).max(5000),
+      inventory_complete: z.boolean(),
+      scope_paths: z.array(z.string().min(1)).min(1).max(5000),
       coverage_ledger: z.array(CoverageEntrySchema).max(5000),
       findings: z.array(FindingSchema).max(1000),
       independent_checks: z.array(z.strictObject({
@@ -397,12 +410,13 @@ function createServer(): McpServer {
       })).max(1000),
       requested_status: z.enum(["complete", "incomplete"])
     })
-  }, async ({ repository, scope, scope_paths, coverage_ledger, findings, independent_checks, requested_status }) => {
+  }, async ({ repository, scope, inventory_complete, scope_paths, coverage_ledger, findings, independent_checks, requested_status }) => {
     const coverage = validateCoverage(scope_paths, coverage_ledger);
     const verification = verifyIndependentReview(findings, independent_checks);
+    const coverageGate = coverage.valid && inventory_complete;
     return result({
-      ...generateReport(repository, scope, findings, coverage.valid, verification.passed, requested_status),
-      gates: { coverage, independent_verification: verification }
+      ...generateReport(repository, scope, findings, coverageGate, verification.passed, requested_status),
+      gates: { inventory_complete, coverage, independent_verification: verification }
     });
   });
 
