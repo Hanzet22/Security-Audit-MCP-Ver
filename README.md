@@ -20,7 +20,7 @@ The server currently exposes:
 | `audit_coverage_validate` | 2 | Validate the coverage ledger |
 | `audit_findings_validate` | 4 | Validate structured finding records |
 | `audit_independent_verify` | 5 | Compare findings with separately supplied reviewer checks |
-| `audit_report_generate` | 6 | Generate target-neutral Markdown reports |
+| `audit_report_generate` | 6 | Validate final gates and generate JSON/Markdown reports |
 
 The workflow is intentionally explicit: reconnaissance inventory is not a completed review; heuristic matches are not confirmed vulnerabilities; a separate reviewer must provide verification checks; and incomplete coverage or verification keeps the run marked incomplete.
 
@@ -35,6 +35,7 @@ The workflow is intentionally explicit: reconnaissance inventory is not a comple
 ```bash
 npm install
 npm run typecheck
+npm test
 npm run build
 npm start
 ```
@@ -87,7 +88,7 @@ A future sandboxed runner would require OS-enforced isolation, no external netwo
 3. **Candidate generation:** inspect source and produce heuristic leads with file/line evidence.
 4. **Structured findings:** validate records, verdicts, evidence and unique fingerprints.
 5. **Independent verification:** compare findings against a separate reviewer’s checks.
-6. **Reporting:** generate `REPORT.md`, `FINDINGS-DETAIL.md`, and `NEEDS-VALIDATION.md`; disclose incomplete runs.
+6. **Reporting:** generate `findings.json`, `REPORT.md`, `FINDINGS-DETAIL.md`, and `NEEDS-VALIDATION.md`; disclose incomplete runs.
 
 The current implementation provides workflow primitives, not an autonomous six-phase audit agent. It does not claim that a complete audit has occurred merely because tools were called.
 
