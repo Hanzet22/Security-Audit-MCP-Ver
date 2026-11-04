@@ -54,8 +54,8 @@ export function prepareCloudflareReconnaissance(input: {
   budget: number | null;
   scout_reports: ScoutReports;
   coverage_units: ReconCoverageUnit[];
-  prior_run_paths?: string[];
-  selected_companion_files?: string[];
+  prior_run_paths?: string[] | undefined;
+  selected_companion_files?: string[] | undefined;
 }) {
   const minimum = 4 + (input.profile === "quick" ? 1 : 2) + 1;
   const budgetBlocked = input.budget !== null && input.budget < minimum;
