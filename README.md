@@ -6,7 +6,7 @@ This is an independent implementation inspired by the workflow in [Cloudflare Se
 
 ## Current status
 
-**v0.3.0-dev — MCP SDK v2, structured workflow primitives, and upstream Cloudflare validators.**
+**v0.3.0 — release preparation; no formal GitHub Release has been published.**
 
 The server currently exposes **18 MCP tools**:
 
@@ -59,6 +59,8 @@ npm run dev
 
 The production stdio entry point is `dist/stdio.js`. The exported `createServer()` factory in `src/index.ts` is also used by the in-process MCP integration smoke test; importing it does not start a stdio process.
 
+> Release-readiness note: a committed npm lockfile is not present yet. Until one is generated and reviewed, dependency installation is not fully reproducible and CI uses `npm install`. Adding a lockfile and switching CI to `npm ci` is a release gate.
+
 ## MCP host configuration
 
 Example for a host that launches a local Node process:
@@ -106,12 +108,19 @@ A future sandboxed runner would require OS-enforced isolation, no external netwo
 
 The current implementation provides workflow primitives, not an autonomous six-phase audit agent. It does not claim that a complete audit has occurred merely because tools were called.
 
+## Security
+
+See [SECURITY.md](./SECURITY.md) for supported versions, reporting guidance, and project scope.
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for the development history and release status.
+
 ## License
 
 GNU Affero General Public License v3.0 or later. See [LICENSE](./LICENSE).
 
 Upstream inspiration and attribution details: [ATTRIBUTIONS.md](./ATTRIBUTIONS.md).
-
 
 ## Parent-side critic and worker orchestration
 
