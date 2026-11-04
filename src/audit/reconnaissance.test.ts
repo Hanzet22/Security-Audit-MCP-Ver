@@ -71,7 +71,6 @@ test("rejects invalid or colliding canonical coverage references", () => {
   assert.throws(() => prepareCloudflareReconnaissance(input({ coverage_units: [invalid] })));
 });
 
-test("does not pretend to load prior run files from path names alone", () => {
-  const result = prepareCloudflareReconnaissance(input({ prior_run_paths: ["runs/run-001/coverage-ledger.json"] }));
-  assert.match(result.run_metadata.prior_run_handling, /must be read, validated, and compared/);
+test("rejects prior-run path names without validated prior artifacts", () => {
+  assert.throws(() => prepareCloudflareReconnaissance(input({ prior_run_paths: ["runs/run-001/coverage-ledger.json"] })), /Prior-run paths alone are not prior evidence/);
 });
