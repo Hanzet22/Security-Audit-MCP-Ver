@@ -44,12 +44,14 @@ The workflow is intentionally explicit: reconnaissance inventory is not a comple
 ## Install and build
 
 ```bash
-npm install
+npm ci
 npm run typecheck
 npm test
 npm run build
 npm start
 ```
+
+`npm test` runs the unit, integration, upstream-validator, and fast-check property tests. Use `npm install` when intentionally changing dependencies; review and commit the resulting lockfile.
 
 For local development:
 
