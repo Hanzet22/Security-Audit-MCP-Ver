@@ -1,71 +1,110 @@
 # Security-Audit-MCP-Ver
 
+**Language:** English (EU) · [English (US)](./README.en-US.md) · [Bahasa Indonesia](./README.id.md) · [Malay (Singapore)](./README.ms-SG.md)
+
 Read-only, evidence-led source-code security audit tools exposed through the Model Context Protocol (MCP).
 
-This is an independent implementation inspired by the workflow in [Cloudflare Security Audit Skill](https://github.com/cloudflare/security-audit-skill). It is not affiliated with or endorsed by Cloudflare.
+Independent implementation inspired by the workflow in [Cloudflare Security Audit Skill](https://github.com/cloudflare/security-audit-skill). This project is not affiliated with or endorsed by Cloudflare. Cloudflare's upstream material remains under its original MIT licence; this project's own code is licensed under AGPL-3.0-or-later. See [ATTRIBUTIONS.md](./ATTRIBUTIONS.md).
 
-## Current status
+## Status
 
-**v0.3.0 — release candidate; no Git tag or formal GitHub Release has been published yet.**
+**Version 0.3.0 release publication status: pending.** The release tag and formal GitHub Release must exist before this version is described as published. See [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md).
 
-The server currently exposes **18 MCP tools**:
-
-| Tool | Workflow phase | Purpose |
-|---|---:|---|
-| `repository_inspect` | Recon | Read GitHub repository metadata |
-| `repository_tree` | Recon | List bounded repository paths |
-| `repository_read_file` | Recon | Read one bounded text file |
-| `cloudflare_reconnaissance_prepare` | 1 | Build run metadata, architecture summary, and canonical coverage ledger from four caller-supplied scout reports |
-| `cloudflare_hunting_wave_prepare` | 2 | Validate, rank, assign, and explicitly defer canonical coverage units for a bounded hunting wave |
-| `cloudflare_hunter_results_consolidate` | 2 | Validate ownership and structured hunter results, then consolidate only assigned ledger units |
-| `cloudflare_coverage_critic` | 2.5 | Validate a caller-supplied full-ledger critic review and gate the next wave |
-| `worker_task_contract_validate` | 2.5 | Validate worker task identity, role, source ref, scope, and constraints |
-| `worker_result_contract_validate` | 2.5 | Validate worker result identity, path ownership, evidence-reference shape, and blockers |
-| `worker_orchestrator_step` | 2.5 | Advance the stateless parent-side workflow through result, critic, verification, and next-wave gates |
-| `audit_reconnaissance` | 1 | Inventory and classify repository files |
-| `source_security_review` | 3 | Generate heuristic candidate leads |
-| `cloudflare_coverage_ledger_validate` | 1–2 | Validate canonical coverage ledgers with Cloudflare's upstream validator |
-| `cloudflare_findings_validate` | 4–5 | Validate findings against Cloudflare's upstream report schema and semantic rules |
-| `audit_coverage_validate` | 2 | Validate that every in-scope path has exactly one coverage-ledger entry |
-| `audit_findings_validate` | 4 | Validate finding structure, evidence fields, and unique fingerprints |
-| `audit_independent_verify` | 5 | Compare findings with separately supplied reviewer checks |
-| `audit_report_generate` | 6 | Validate final gates and generate JSON/Markdown reports |
-
-The Phase 1 adapter follows the upstream reconnaissance contract: four distinct scout-report categories, a pre-recon budget gate, architecture summary, scope-aware canonical coverage units, and explicit prior-run limitations. Phase 2 adds deterministic priority ranking, bounded assignments, explicit deferred states, structured result consolidation, ownership checks, and parent-confirmed artifact promotion checks. Neither phase spawns agents; scout and hunter results are caller-supplied. The `cloudflare_*_validate` tools run upstream validators and schema preserved under `vendor/cloudflare-security-audit-skill/`. Upstream methodology, companion guidance, validator tests, and notices are also preserved there under MIT.
-
-The workflow is intentionally explicit: reconnaissance inventory is not a completed review; heuristic matches are not confirmed vulnerabilities; a separate reviewer must provide verification checks; and incomplete coverage or verification keeps the run marked incomplete.
+The server exposes 18 MCP tools covering repository reconnaissance, coverage planning, source review, findings validation, independent verification, orchestration contracts and report generation. It provides workflow primitives, not an autonomous audit agent.
 
 ## Requirements
 
-- Node.js 22 or newer; production deployments should use a currently supported LTS release (currently 22, 24, or 26).
-- An MCP-compatible host
-- Optional GitHub fine-grained token for higher API limits or private repositories
+- Node.js 22 or newer (use a supported LTS release).
+- An MCP-compatible client.
+- Optional fine-grained GitHub token for private repositories or higher API limits. Grant only **Contents: read-only** and **Metadata: read-only**.
 
-## Install and build
+## Install from source
 
 ```bash
+git clone https://github.com/Hanzet22/Security-Audit-MCP-Ver.git
+cd Security-Audit-MCP-Ver
 npm ci
+npm run build
+```
+
+To run the complete local validation suite:
+
+```bash
 npm run typecheck
 npm test
 npm run build
-npm start
 ```
 
-`npm test` runs the unit, integration, upstream-validator, and fast-check property tests. Use `npm install` when intentionally changing dependencies; review and commit the resulting lockfile.
+The production STDIO entry point is `dist/stdio.js`. The server currently supports **local STDIO only**; it does not provide an HTTP endpoint, remote MCP URL, OAuth flow or hosted service.
 
-For local development:
+## Configure an MCP client
+
+Replace `/absolute/path/to/Security-Audit-MCP-Ver` with the actual path to the cloned repository. Build the project before connecting a client.
+
+### Claude Code
+
+Add a user-level server:
 
 ```bash
-npm run dev
+claude mcp add --transport stdio --scope user security-audit-mcp-ver -- node /absolute/path/to/Security-Audit-MCP-Ver/dist/stdio.js
+claude mcp list
 ```
 
-The production stdio entry point is `dist/stdio.js`. The exported `createServer()` factory in `src/index.ts` is also used by the in-process MCP integration smoke test; importing it does not start a stdio process.
+Run `/mcp` inside Claude Code to inspect the connection. For project-only configuration, use `--scope project` instead of `--scope user`.
 
-> Dependency installation is locked by the committed npm-generated `package-lock.json`; CI uses `npm ci`. Regenerate and review the lockfile whenever dependency manifests change.
+### OpenAI Codex CLI
 
-## MCP host configuration
+```bash
+codex mcp add security-audit-mcp-ver -- node /absolute/path/to/Security-Audit-MCP-Ver/dist/stdio.js
+codex mcp list
+```
 
-Example for a host that launches a local Node process:
+Codex stores the entry in `~/.codex/config.toml`. You can also configure it there:
+
+```toml
+[mcp_servers.security-audit-mcp-ver]
+command = "node"
+args = ["/absolute/path/to/Security-Audit-MCP-Ver/dist/stdio.js"]
+```
+
+### Cursor
+
+Create `.cursor/mcp.json` in your project, or use the global Cursor MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "security-audit-mcp-ver": {
+      "command": "node",
+      "args": ["/absolute/path/to/Security-Audit-MCP-Ver/dist/stdio.js"]
+    }
+  }
+}
+```
+
+### Visual Studio Code
+
+For clients that use the VS Code MCP configuration format, create `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "security-audit-mcp-ver": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/absolute/path/to/Security-Audit-MCP-Ver/dist/stdio.js"]
+    }
+  }
+}
+```
+
+Client configuration formats can differ. Consult the client's current MCP documentation if its schema changes.
+
+## Optional GitHub token
+
+Public repositories can be read without a token, subject to GitHub's unauthenticated API rate limits. If required, set `GITHUB_TOKEN` in the MCP client's server environment. Use a fine-grained token limited to the repositories needed, with **Contents: read-only** and **Metadata: read-only** permissions. Never commit tokens or paste them into tool arguments.
+
+Example for a client configuration that supports environment variables:
 
 ```json
 {
@@ -74,118 +113,50 @@ Example for a host that launches a local Node process:
       "command": "node",
       "args": ["/absolute/path/to/Security-Audit-MCP-Ver/dist/stdio.js"],
       "env": {
-        "GITHUB_TOKEN": "OPTIONAL_READ_ONLY_TOKEN"
+        "GITHUB_TOKEN": "YOUR_READ_ONLY_TOKEN"
       }
     }
   }
 }
 ```
 
-Use a fine-grained GitHub token with read-only repository Contents and Metadata permissions. Do not use a token with write permissions for this read-only server.
+Prefer your operating system's secret manager or the client's secure environment-variable mechanism over storing a token in a shared project file.
 
-## Safety model
+## What the server does
 
-- GitHub access uses read APIs only.
-- The server never clones or executes target repository code.
-- No deployed endpoint, production service, or third-party infrastructure is probed.
-- Repository URL parsing accepts GitHub HTTPS URLs only.
-- Repository URL parsing rejects embedded credentials and non-standard ports; GitHub API responses are content-type checked and capped at 5 MB, with bounded timeouts and sanitized error messages.
-- Source pattern matches are candidate leads, not proof of exploitability.
-- Potential credential evidence is redacted before candidate output.
-- Only confirmed records may contain severity; `needs_validation` records cannot.
-- The server does not spawn independent sub-agents. The upstream validation tools validate record structure and semantics; they do not independently re-read repository source or establish a vulnerability by themselves. Phase 5 requires separately supplied reviewer checks.
-- Reports are marked `incomplete` unless coverage and independent-verification gates pass.
-- Do not submit secrets or private source code unless you are authorized to share them.
+- Reads GitHub repository metadata, bounded trees and text files.
+- Prepares reconnaissance reports and canonical coverage ledgers.
+- Plans bounded hunting waves and validates caller-supplied results.
+- Validates findings, evidence structure and unique fingerprints.
+- Checks separately supplied reviewer records.
+- Generates JSON and Markdown audit reports.
 
-A future sandboxed runner would require OS-enforced isolation, no external network access, restricted environment variables, resource limits, and scratch-only writes. This project does not implement such a runner.
+## Safety model and limitations
 
-## Runtime behavior and limits
+- GitHub access is read-only.
+- The server does not clone or execute target repository code.
+- It does not probe deployed endpoints or third-party infrastructure.
+- Heuristic matches are candidate leads, not proof of vulnerabilities.
+- Caller-supplied refs, line ranges, worker results and orchestration state are not cryptographically attested.
+- Workflow gates check record consistency; they do not prove that independent work occurred.
+- The server does not spawn agents, run background jobs, persist queues or independently authenticate evidence.
+- Reports remain incomplete unless the required coverage and verification gates pass.
 
-### Transport
+Important resource limits include a 15-second GitHub API timeout, a 5 MB response-body cap, up to 500 returned tree entries, a 300 KB individual-file limit and 100,000 characters of source text per review operation. Truncated or rejected inputs must not be treated as fully reviewed.
 
-The current server supports **local stdio transport only** through `src/stdio.ts`.
-It does not expose an HTTP endpoint, remote MCP URL, OAuth flow, or hosted service.
-A compatible host must launch the local Node.js process. Remote transport and
-deployment are separate future work and are not implied by this repository's
-current capabilities.
+## Development and contribution
 
-### GitHub access
+```bash
+npm ci
+npm run typecheck
+npm test
+npm run build
+```
 
-- Public repositories can be read without a token, subject to GitHub's unauthenticated API rate limits.
-- Set `GITHUB_TOKEN` in the host process environment when access to private repositories or a higher API rate limit is required.
-- Use a fine-grained token restricted to the repositories needed, with **Contents: read-only** and **Metadata: read-only** permissions.
-- The token is used only for GitHub API requests. Do not paste it into tool arguments, source files, issue reports, or committed configuration.
-- The server does not write to GitHub. A read-only token is recommended as defense in depth.
+See [CONTRIBUTING.md](./CONTRIBUTING.md), [SECURITY.md](./SECURITY.md), [CHANGELOG.md](./CHANGELOG.md) and [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md).
 
-### Resource bounds
+## Licence
 
-The GitHub API boundary applies the following fixed limits:
+Project code: **GNU Affero General Public License v3.0 or later**. See [LICENSE](./LICENSE).
 
-| Resource | Limit |
-|---|---:|
-| GitHub API request timeout | 15 seconds |
-| GitHub API response body | 5 MB |
-| Repository tree entries returned | 500 |
-| Individual file content | 300 KB |
-| Source text processed by review tools | 100,000 characters |
-
-A truncated repository tree is reported as truncated; it must not be treated as a complete inventory.
-Files or responses beyond the configured limits are rejected rather than silently treated as fully reviewed.
-
-### Evidence and trust boundaries
-
-Tool output is evidence for a human-led review, not a certification or proof that a repository is secure.
-Repository refs, line ranges, scout reports, worker results, critic reviews, and orchestration
-state are supplied by callers and are not cryptographically attested by this server.
-A passing workflow gate means that the supplied records satisfy the implemented consistency
-checks; it does not prove that a separate person or agent performed the claimed work.
-Always verify important evidence against the referenced source revision before making a decision.
-
-## Workflow model
-
-1. **Reconnaissance:** use `cloudflare_reconnaissance_prepare` with four source-cited scout reports and coverage-unit candidates; it emits `run-metadata.json`, `architecture.md`, and a canonical `coverage-ledger.json` validated by Cloudflare's upstream validator. It does not spawn agents.
-2. **Coverage-led hunting:** prepare a bounded wave with `cloudflare_hunting_wave_prepare`; return one structured result per assigned coverage ID; consolidate with `cloudflare_hunter_results_consolidate`; then run a fresh source-reading coverage critic before another wave. The planner does not spawn hunters. Local checks are accepted only when the parent explicitly supplies paths already promoted through a trusted sandbox procedure.
-3. **Candidate generation:** inspect source and produce heuristic leads with file/line evidence.
-4. **Structured findings:** validate records, verdicts, evidence and unique fingerprints.
-5. **Independent verification:** compare findings against a separate reviewer’s checks.
-6. **Reporting:** generate `findings.json`, `REPORT.md`, `FINDINGS-DETAIL.md`, and `NEEDS-VALIDATION.md`; disclose incomplete runs.
-
-The current implementation provides workflow primitives, not an autonomous six-phase audit agent. It does not claim that a complete audit has occurred merely because tools were called.
-
-## Security
-
-See [SECURITY.md](./SECURITY.md) for supported versions, reporting guidance, and project scope.
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, test expectations, project boundaries, and licensing requirements.
-
-## Release readiness
-
-The v0.3.0 release candidate is being prepared. Before publishing a tag or GitHub Release, follow the repository's [release checklist](./RELEASE_CHECKLIST.md). The current transport is local stdio only; no hosted HTTP endpoint or remote MCP service is included.
-
-## Changelog
-
-See [CHANGELOG.md](./CHANGELOG.md) for the development history and release status.
-
-## License
-
-GNU Affero General Public License v3.0 or later. See [LICENSE](./LICENSE).
-
-Upstream inspiration and attribution details: [ATTRIBUTIONS.md](./ATTRIBUTIONS.md).
-
-## Parent-side critic and worker orchestration
-
-The MCP exposes `cloudflare_coverage_critic`, `worker_task_contract_validate`,
-`worker_result_contract_validate`, and `worker_orchestrator_step`.
-
-These tools validate caller-supplied review and worker records and enforce the
-sequence: assigned work → complete worker results → full-ledger critic →
-independent verification → next-wave gate. Orchestration state is caller-held,
-unsigned JSON and can be altered or replayed; the gates check workflow
-consistency, not authorization or proof of independent work. They are stateless
-workflow controls, not an autonomous agent runtime: this server does not spawn workers,
-create background jobs, persist queues, or independently authenticate evidence.
-A host application or external orchestrator must execute workers and supply
-their structured results. Source inspection remains read-only; target code is
-not executed and deployed endpoints are not probed.
+Third-party upstream material: see [ATTRIBUTIONS.md](./ATTRIBUTIONS.md) and the preserved notices in `vendor/cloudflare-security-audit-skill/`.
