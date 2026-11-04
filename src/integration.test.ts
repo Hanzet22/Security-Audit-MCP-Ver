@@ -60,6 +60,24 @@ test("MCP server initializes, discovers all tools, and executes a contract tool"
     assert.ok(textContent && textContent.type === "text");
     const payload = JSON.parse(textContent.text) as { valid?: boolean };
     assert.equal(payload.valid, true);
+
+    const rejectedUrl = await client.callTool({
+      name: "repository_inspect",
+      arguments: { repository: "https://user@github.com/example/repo" }
+    });
+    assert.equal(rejectedUrl.isError, true);
+
+    const rejectedPort = await client.callTool({
+      name: "repository_inspect",
+      arguments: { repository: "https://github.com:8443/example/repo" }
+    });
+    assert.equal(rejectedPort.isError, true);
+
+    const rejectedPath = await client.callTool({
+      name: "repository_read_file",
+      arguments: { repository: "example/repo", path: "../secrets.txt" }
+    });
+    assert.equal(rejectedPath.isError, true);
   } finally {
     await client.close();
     await server.close();
