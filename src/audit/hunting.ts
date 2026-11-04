@@ -5,7 +5,7 @@
  * Copyright (C) 2026 Hanzet22 — GNU AGPL-3.0-or-later.
  */
 import { createHash } from "node:crypto";
-import { isCloudflareSafeRelativePath, validateCloudflareCoverageLedger } from "./upstream.js";
+import { isCloudflareSafeRelativePath, validateCloudflareCoverageLedger, validateCloudflareFindings } from "./upstream.js";
 
 type LedgerUnit = Record<string, any>;
 type HunterCheck = {
@@ -137,6 +137,7 @@ export function consolidateCloudflareHunterResults(input: {
   for (const path of promoted) if (!isCloudflareSafeRelativePath(path)) throw new Error("promoted_artifacts contains an unsafe path.");
   const resultById = new Map<string, HunterUnitResult>();
   const candidateRecords: unknown[] = [];
+  const candidateFingerprints = new Set<string>();
   const hardening: string[] = [];
   const uncovered: HunterResult["uncovered"] = [];
   for (const result of input.results) {
@@ -147,9 +148,29 @@ export function consolidateCloudflareHunterResults(input: {
       if (resultById.has(unit.coverage_id)) throw new Error(`Duplicate hunter result for ${unit.coverage_id}.`);
       resultById.set(unit.coverage_id, unit);
     }
-    candidateRecords.push(...result.candidates);
+    for (const candidate of result.candidates) {
+      if (candidate === null || typeof candidate !== "object" || Array.isArray(candidate)) {
+        throw new Error("Hunter candidate must be an object.");
+      }
+      const record = candidate as Record<string, unknown>;
+      if (record.proposed_verdict !== "confirmed" && record.proposed_verdict !== "needs_validation") {
+        throw new Error("Hunter candidate proposed_verdict must be confirmed or needs_validation.");
+      }
+      if (typeof record.fingerprint !== "string" || candidateFingerprints.has(record.fingerprint)) {
+        throw new Error("Hunter candidate fingerprints must be unique across the wave.");
+      }
+      candidateFingerprints.add(record.fingerprint);
+      const proposedVerdict = record.proposed_verdict;
+      const fields = { ...record };
+      delete fields.proposed_verdict;
+      candidateRecords.push({ ...fields, verdict: proposedVerdict });
+    }
     hardening.push(...result.hardening);
     uncovered.push(...result.uncovered);
+  }
+  const candidateValidation = validateCloudflareFindings(candidateRecords);
+  if (!candidateValidation.valid) {
+    throw new Error("Hunter candidate records failed the upstream Cloudflare report schema: " + candidateValidation.errors.join("; "));
   }
   const assigned = new Set(input.assigned_coverage_ids);
   for (const id of resultById.keys()) if (!assigned.has(id)) throw new Error(`Hunter returned unassigned coverage ID ${id}.`);
