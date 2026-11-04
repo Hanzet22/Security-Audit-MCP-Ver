@@ -275,6 +275,54 @@ function createServer(): McpServer {
     } catch (error) { return failure(error); }
   });
 
+  server.registerTool("cloudflare_reconnaissance_prepare", {
+    description: "Cloudflare Skill Phase 1 adapter: synthesize four caller-supplied read-only scout reports into run-metadata.json, architecture.md, and a canonical coverage-ledger.json validated by the upstream validator. Does not spawn agents or execute target code.",
+    inputSchema: z.object({
+      run_id: z.string().min(1).max(100),
+      repository: z.string().min(3).max(300),
+      target: z.string().min(1).max(1000),
+      source_ref: z.string().min(7).max(100),
+      profile: z.enum(["quick", "standard", "deep"]).default("standard"),
+      scope_paths: z.array(z.string().min(1).max(500)).max(5000).default([]),
+      budget: z.number().int().nonnegative().nullable().default(null),
+      prior_run_paths: z.array(z.string().min(1).max(1000)).max(100).optional(),
+      selected_companion_files: z.array(z.string().min(1).max(300)).max(100).optional(),
+      scout_reports: z.strictObject({
+        product_stack: z.array(z.strictObject({ statement: z.string().min(1).max(2000), refs: z.array(z.string().min(1).max(500)).min(1).max(30) })).max(100),
+        principals_controls: z.array(z.strictObject({ statement: z.string().min(1).max(2000), refs: z.array(z.string().min(1).max(500)).min(1).max(30) })).max(100),
+        entry_surfaces_sinks: z.array(z.strictObject({ statement: z.string().min(1).max(2000), refs: z.array(z.string().min(1).max(500)).min(1).max(30) })).max(100),
+        local_execution_deployment: z.array(z.strictObject({ statement: z.string().min(1).max(2000), refs: z.array(z.string().min(1).max(500)).min(1).max(30) })).max(100)
+      }),
+      coverage_units: z.array(z.strictObject({
+        canonical_refs: z.strictObject({
+          surface: z.string().min(1).max(4096),
+          boundary: z.string().min(1).max(4096),
+          subsystem: z.string().min(1).max(4096),
+          attack_class: z.string().min(1).max(4096),
+          lifecycle: z.string().min(1).max(4096).optional()
+        }),
+        surface: z.string().min(1).max(4096),
+        boundary: z.string().min(1).max(4096),
+        subsystem: z.string().min(1).max(4096),
+        attack_class: z.string().min(1).max(4096),
+        lifecycle: z.string().min(1).max(4096).optional(),
+        starting_paths: z.array(z.string().min(1).max(500)).min(1).max(100),
+        ordinary_attack_class_block: z.string().min(1).max(300).nullable(),
+        selected_companion_blocks: z.array(z.string().min(1).max(300)).max(100),
+        excluded_blocks: z.array(z.strictObject({ block: z.string().min(1).max(300), reason: z.string().min(1).max(2000) })).max(100)
+      })).max(5000)
+    })
+  }, async input => {
+    try {
+      return result({
+        upstream: "cloudflare/security-audit-skill",
+        upstream_commit: "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+        phase: 1,
+        ...prepareCloudflareReconnaissance(input)
+      });
+    } catch (error) { return failure(error); }
+  });
+
   server.registerTool("audit_reconnaissance", {
     description: "Phase 1: map repository metadata and paths, classify files, and create an initial not-yet-reviewed inventory.",
     inputSchema: z.object({
