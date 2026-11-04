@@ -29,6 +29,7 @@ jobs:
         with:
           path: ./
           artifact-name: security-audit-mcp-ver.spdx.json
-          dependency-snapshot: true
+          # Dependency submission requires write access, which GitHub restricts on fork PRs.
+          dependency-snapshot: ${{ github.event_name != 'pull_request' }}
           upload-artifact: true
           upload-release-assets: false
