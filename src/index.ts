@@ -274,28 +274,37 @@ function generateReport(
   };
 }
 
+const SAFE_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+
 const WorkerTaskSchema = z.strictObject({
   contract_version: z.literal("1.0"),
-  task_id: z.string().min(1).max(64),
-  worker_id: z.string().min(1).max(64),
+  task_id: z.string().regex(SAFE_ID_PATTERN),
+  worker_id: z.string().regex(SAFE_ID_PATTERN),
   role: z.enum(["recon", "hunter", "critic", "verifier"]),
-  source_ref: z.string().min(1).max(200),
-  coverage_ids: z.array(z.string().min(1).max(65536)).min(1).max(10000),
-  allowed_paths: z.array(z.string().min(1).max(500)).min(1).max(5000),
-  objective: z.string().min(1).max(3000),
+  source_ref: z.string().min(1).max(200).refine(value => value.trim().length > 0),
+  coverage_ids: z.array(z.string().min(1).max(65536)).min(1).max(10000)
+    .refine(values => new Set(values).size === values.length),
+  allowed_paths: z.array(z.string().min(1).max(500)).min(1).max(5000)
+    .refine(values => new Set(values).size === values.length),
+  objective: z.string().min(1).max(3000).refine(value => value.trim().length > 0),
   prohibited_actions: z.array(z.string().min(1).max(1000)).min(1).max(100)
+    .refine(values => values.every(value => value.trim().length > 0))
 });
 
 const OrchestrationStateSchema = z.strictObject({
   version: z.literal("1.0"),
-  run_id: z.string().min(1).max(64),
+  run_id: z.string().regex(SAFE_ID_PATTERN),
   phase: z.enum(["hunting", "critic_pending", "verification_pending", "ready_for_next_wave", "complete", "blocked"]),
   assignments: z.array(z.strictObject({
-    task_id: z.string().min(1).max(64),
-    worker_id: z.string().min(1).max(64),
+    task_id: z.string().regex(SAFE_ID_PATTERN),
+    worker_id: z.string().regex(SAFE_ID_PATTERN),
     coverage_id: z.string().min(1).max(65536),
     status: z.enum(["assigned", "completed", "blocked"])
-  })).min(1).max(100),
+  })).min(1).max(100).refine(assignments =>
+    new Set(assignments.map(item => item.task_id)).size === assignments.length &&
+    new Set(assignments.map(item => item.worker_id)).size === assignments.length &&
+    new Set(assignments.map(item => item.coverage_id)).size === assignments.length
+  ),
   critic_gate_passed: z.boolean(),
   verification_passed: z.boolean(),
   history: z.array(z.string().min(1).max(500)).max(1000)
@@ -305,20 +314,25 @@ const HunterResultSchema = z.strictObject({
   units: z.array(z.strictObject({
     coverage_id: z.string().min(1).max(65536),
     disposition: z.enum(["covered", "candidate", "blocked"]),
-    reviewed_paths: z.array(z.string().min(1).max(500)).max(5000),
+    reviewed_paths: z.array(z.string().min(1).max(500)).min(1).max(5000)
+      .refine(paths => new Set(paths).size === paths.length),
     checks: z.array(z.strictObject({
-      agent_id: z.string().min(1).max(64),
-      reviewed_paths: z.array(z.string().min(1).max(500)).min(1).max(5000),
-      invariant: z.string().min(1).max(5000),
+      agent_id: z.string().regex(SAFE_ID_PATTERN),
+      reviewed_paths: z.array(z.string().min(1).max(500)).min(1).max(5000)
+        .refine(paths => new Set(paths).size === paths.length),
+      invariant: z.string().min(1).max(5000).refine(value => value.trim().length > 0),
       method: z.enum(["source", "local"]),
-      result: z.string().min(1).max(5000),
+      result: z.string().min(1).max(5000).refine(value => value.trim().length > 0),
       artifact: z.string().max(1000).nullable()
     })).min(1).max(1000),
-    candidate_fingerprints: z.array(z.string().min(1).max(500)).max(1000),
+    candidate_fingerprints: z.array(z.string().min(1).max(500)).max(1000)
+      .refine(values => new Set(values).size === values.length),
     unresolved: z.array(z.string().min(1).max(1000)).max(1000)
+      .refine(values => values.every(value => value.trim().length > 0) && new Set(values).size === values.length)
   })).min(1).max(10000),
   candidates: z.array(z.record(z.string(), z.unknown())).max(1000),
-  hardening: z.array(z.string().min(1).max(2000)).max(1000),
+  hardening: z.array(z.string().min(1).max(2000)).max(1000)
+    .refine(values => values.every(value => value.trim().length > 0)),
   uncovered: z.array(z.strictObject({
     surface: z.string().min(1).max(2000),
     boundary: z.string().min(1).max(2000),
@@ -516,7 +530,6 @@ export function createServer(): McpServer {
   server.registerTool("worker_task_contract_validate", {
     description: "Validate a versioned worker task contract, role, source ref, assigned coverage IDs, safe owned paths, objective and explicit prohibited actions. Does not start a worker.",
     inputSchema: WorkerTaskSchema
-
   }, async task => {
     try { return result(validateWorkerTask(task)); }
     catch (error) { return failure(error); }
