@@ -8,6 +8,9 @@ Included upstream files:
 - `validate-findings.cjs`
 - `validate-coverage-ledger.cjs`
 - `report-schema.json`
+- `SKILL.md`, `RECONNAISSANCE.md`, `HUNTING.md`, `VALIDATION-AND-REPORTING.md`
+- `ATTACK-CLASSES.md` and all companion guidance documents
+- `validate-coverage-ledger.test.cjs`, `validate-findings.test.cjs`
 
 Copyright (c) 2025-2026 Cloudflare, Inc. These upstream files are licensed under
 the MIT License reproduced in [LICENSE](./LICENSE).
