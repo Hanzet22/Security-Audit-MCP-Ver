@@ -156,6 +156,10 @@ The current implementation provides workflow primitives, not an autonomous six-p
 
 See [SECURITY.md](./SECURITY.md) for supported versions, reporting guidance, and project scope.
 
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, test expectations, project boundaries, and licensing requirements.
+
 ## Release readiness
 
 The v0.3.0 release candidate is being prepared. Before publishing a tag or GitHub Release, follow the repository's [release checklist](./RELEASE_CHECKLIST.md). The current transport is local stdio only; no hosted HTTP endpoint or remote MCP service is included.
