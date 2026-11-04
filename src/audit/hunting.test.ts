@@ -77,6 +77,64 @@ test("consolidates a source-only covered result and validates it upstream", () =
   assert.equal(consolidated.ledger.find((u: any) => u.coverage_id === assignment.coverage_id)?.status, "covered");
 });
 
+test("rejects candidate fingerprints without matching candidate records", () => {
+  const prepared = prepareCloudflareHuntingWave({ ledger: ledger(), max_hunters: 1 });
+  const assignment = prepared.assignments[0]!;
+  assert.throws(() => consolidateCloudflareHunterResults({
+    ledger: prepared.ledger,
+    assigned_coverage_ids: [assignment.coverage_id],
+    results: [{
+      units: [{
+        coverage_id: assignment.coverage_id,
+        disposition: "candidate",
+        reviewed_paths: ["src/index.ts"],
+        checks: [{
+          agent_id: assignment.agent_id,
+          reviewed_paths: ["src/index.ts"],
+          invariant: "Candidate records must map to a unit.",
+          method: "source",
+          result: "Source review produced a candidate reference.",
+          artifact: null
+        }],
+        candidate_fingerprints: ["MISSING:CANDIDATE:1"],
+        unresolved: []
+      }],
+      candidates: [],
+      hardening: [],
+      uncovered: []
+    }]
+  }), /Candidate records and coverage-unit candidate_fingerprints must match exactly/);
+});
+
+test("rejects malformed candidate fingerprint arrays before processing", () => {
+  const prepared = prepareCloudflareHuntingWave({ ledger: ledger(), max_hunters: 1 });
+  const assignment = prepared.assignments[0]!;
+  assert.throws(() => consolidateCloudflareHunterResults({
+    ledger: prepared.ledger,
+    assigned_coverage_ids: [assignment.coverage_id],
+    results: [{
+      units: [{
+        coverage_id: assignment.coverage_id,
+        disposition: "covered",
+        reviewed_paths: ["src/index.ts"],
+        checks: [{
+          agent_id: assignment.agent_id,
+          reviewed_paths: ["src/index.ts"],
+          invariant: "A malformed fingerprint list must be rejected.",
+          method: "source",
+          result: "Malformed test fixture.",
+          artifact: null
+        }],
+        candidate_fingerprints: undefined,
+        unresolved: []
+      }],
+      candidates: [],
+      hardening: [],
+      uncovered: []
+    }] as any
+  }), /candidate_fingerprints/);
+});
+
 test("rejects local evidence unless the parent confirms artifact promotion", () => {
   const prepared = prepareCloudflareHuntingWave({ ledger: ledger(), max_hunters: 1 });
   const assignment = prepared.assignments[0]!;
