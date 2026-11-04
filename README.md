@@ -99,7 +99,6 @@ Use a fine-grained GitHub token with read-only repository Contents and Metadata 
 
 A future sandboxed runner would require OS-enforced isolation, no external network access, restricted environment variables, resource limits, and scratch-only writes. This project does not implement such a runner.
 
-
 ## Runtime behavior and limits
 
 ### Transport
