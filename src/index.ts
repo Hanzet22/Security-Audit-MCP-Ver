@@ -381,7 +381,7 @@ function createServer(): McpServer {
       })
     })
   }, async input => {
-    try { return result(validateCloudflareCoverageCritic(input)); }
+    try { return result(validateCloudflareCoverageCritic(input as Parameters<typeof validateCloudflareCoverageCritic>[0])); }
     catch (error) { return failure(error); }
   });
 
