@@ -274,6 +274,61 @@ function generateReport(
   };
 }
 
+const WorkerTaskSchema = z.strictObject({
+  contract_version: z.literal("1.0"),
+  task_id: z.string().min(1).max(64),
+  worker_id: z.string().min(1).max(64),
+  role: z.enum(["recon", "hunter", "critic", "verifier"]),
+  source_ref: z.string().min(1).max(200),
+  coverage_ids: z.array(z.string().min(1).max(65536)).min(1).max(10000),
+  allowed_paths: z.array(z.string().min(1).max(500)).min(1).max(5000),
+  objective: z.string().min(1).max(3000),
+  prohibited_actions: z.array(z.string().min(1).max(1000)).min(1).max(100)
+});
+
+const OrchestrationStateSchema = z.strictObject({
+  version: z.literal("1.0"),
+  run_id: z.string().min(1).max(64),
+  phase: z.enum(["hunting", "critic_pending", "verification_pending", "ready_for_next_wave", "complete", "blocked"]),
+  assignments: z.array(z.strictObject({
+    task_id: z.string().min(1).max(64),
+    worker_id: z.string().min(1).max(64),
+    coverage_id: z.string().min(1).max(65536),
+    status: z.enum(["assigned", "completed", "blocked"])
+  })).min(1).max(100),
+  critic_gate_passed: z.boolean(),
+  verification_passed: z.boolean(),
+  history: z.array(z.string().min(1).max(500)).max(1000)
+});
+
+const HunterResultSchema = z.strictObject({
+  units: z.array(z.strictObject({
+    coverage_id: z.string().min(1).max(65536),
+    disposition: z.enum(["covered", "candidate", "blocked"]),
+    reviewed_paths: z.array(z.string().min(1).max(500)).max(5000),
+    checks: z.array(z.strictObject({
+      agent_id: z.string().min(1).max(64),
+      reviewed_paths: z.array(z.string().min(1).max(500)).max(5000),
+      invariant: z.string().min(1).max(5000),
+      method: z.enum(["source", "local"]),
+      result: z.string().min(1).max(5000),
+      artifact: z.string().max(1000).nullable()
+    })).max(1000),
+    candidate_fingerprints: z.array(z.string().min(1).max(500)).max(1000),
+    unresolved: z.array(z.string().min(1).max(1000)).max(1000)
+  })).max(10000),
+  candidates: z.array(z.record(z.string(), z.unknown())).max(1000),
+  hardening: z.array(z.string().min(1).max(2000)).max(1000),
+  uncovered: z.array(z.strictObject({
+    surface: z.string().min(1).max(2000),
+    boundary: z.string().min(1).max(2000),
+    subsystem: z.string().min(1).max(2000),
+    attack_class: z.string().min(1).max(2000),
+    starting_paths: z.array(z.string().min(1).max(500)).min(1).max(100),
+    reason: z.string().min(1).max(3000)
+  })).max(1000)
+});
+
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "security-audit-mcp-ver",
@@ -417,8 +472,8 @@ export function createServer(): McpServer {
     description: "Cloudflare Skill Phase 2 parent-side consolidator: validate structured hunter unit results, ownership, source/local checks and parent-promoted artifact paths, then update only assigned ledger units. Does not execute targets or promote artifacts.",
     inputSchema: z.object({
       ledger: z.array(z.unknown()).max(10000),
-      assigned_coverage_ids: z.array(z.string().min(1).max(65536)).max(10000),
-      results: z.array(z.unknown()).max(100),
+      assigned_coverage_ids: z.array(z.string().min(1).max(65536)).min(1).max(10000),
+      results: z.array(HunterResultSchema).max(100),
       promoted_artifacts: z.array(z.string().min(1).max(1000)).max(10000).optional()
     })
   }, async input => {
@@ -467,7 +522,7 @@ export function createServer(): McpServer {
       role: z.enum(["recon", "hunter", "critic", "verifier"]),
       source_ref: z.string().min(1).max(200),
       coverage_ids: z.array(z.string().min(1).max(65536)).max(10000),
-      allowed_paths: z.array(z.string().min(1).max(500)).max(5000),
+      allowed_paths: z.array(z.string().min(1).max(500)).min(1).max(5000),
       objective: z.string().min(1).max(3000),
       prohibited_actions: z.array(z.string().min(1).max(1000)).min(1).max(100)
     })
@@ -479,7 +534,7 @@ export function createServer(): McpServer {
   server.registerTool("worker_result_contract_validate", {
     description: "Validate a worker result against its assigned task identity and path ownership. Evidence references are caller-supplied and are not independently authenticated by this contract.",
     inputSchema: z.strictObject({
-      task: z.unknown(),
+      task: WorkerTaskSchema,
       worker_result: z.strictObject({
         contract_version: z.literal("1.0"),
         task_id: z.string().min(1).max(64),
@@ -508,10 +563,10 @@ export function createServer(): McpServer {
           coverage_id: z.string().min(1).max(65536)
         })).min(1).max(100)
       }),
-      z.strictObject({ action: z.literal("record_result"), state: z.unknown(), task_id: z.string().min(1).max(64), status: z.enum(["completed", "blocked"]) }),
-      z.strictObject({ action: z.literal("record_critic"), state: z.unknown(), gate_passed: z.boolean() }),
-      z.strictObject({ action: z.literal("record_verification"), state: z.unknown(), passed: z.boolean() }),
-      z.strictObject({ action: z.literal("next_wave"), state: z.unknown() })
+      z.strictObject({ action: z.literal("record_result"), state: OrchestrationStateSchema, task_id: z.string().min(1).max(64), status: z.enum(["completed", "blocked"]) }),
+      z.strictObject({ action: z.literal("record_critic"), state: OrchestrationStateSchema, gate_passed: z.boolean() }),
+      z.strictObject({ action: z.literal("record_verification"), state: OrchestrationStateSchema, passed: z.boolean() }),
+      z.strictObject({ action: z.literal("next_wave"), state: OrchestrationStateSchema })
     ])
   }, async input => {
     try { return result(orchestrateWorkerRun(input as Parameters<typeof orchestrateWorkerRun>[0])); }
