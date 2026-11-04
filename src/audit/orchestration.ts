@@ -62,8 +62,17 @@ export function validateCloudflareCoverageCritic(input: {
   const unexamined = ids.filter(id => !examined.has(id));
   const active = input.ledger.filter(unit => unit.status === "in_progress").map(unit => unit.coverage_id as string);
   const unresolvedActive = active.filter(id => !reassign.has(id) && !deferred.has(id));
+  const deferredIds = new Set(input.ledger.filter(unit => unit.status === "deferred").map(unit => unit.coverage_id as string));
+  for (const id of deferred) {
+    if (!deferredIds.has(id)) throw new Error(`accepted_deferred_ids may only accept ledger units already marked deferred: ${id}`);
+  }
+  const unacceptedDeferred = [...deferredIds].filter(id => !deferred.has(id));
+  const unresolvedStatusIds = input.ledger
+    .filter(unit => ["planned", "in_progress", "blocked"].includes(unit.status))
+    .map(unit => unit.coverage_id as string);
   const gatePassed = unexamined.length === 0 && missing.size === 0 && reassign.size === 0 &&
-    unresolvedActive.length === 0 && review.unresolved_questions.length === 0;
+    unresolvedActive.length === 0 && unacceptedDeferred.length === 0 &&
+    unresolvedStatusIds.length === 0 && review.unresolved_questions.length === 0;
   return {
     valid: true,
     gate_passed: gatePassed,
@@ -74,6 +83,8 @@ export function validateCloudflareCoverageCritic(input: {
     missing_units: clone(review.missing_units),
     reassign_ids: clone(review.reassign_ids),
     accepted_deferred_ids: clone(review.accepted_deferred_ids),
+    unaccepted_deferred_ids: unacceptedDeferred,
+    unresolved_status_ids: unresolvedStatusIds,
     unresolved_questions: clone(review.unresolved_questions),
     next_wave_allowed: gatePassed,
     limitations: [
