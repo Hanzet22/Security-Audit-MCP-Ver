@@ -21,11 +21,11 @@ The server currently exposes:
 | `audit_findings_validate` | 4 | Validate structured finding records |
 | `audit_independent_verify` | 5 | Compare findings with separately supplied reviewer checks |
 | `audit_report_generate` | 6 | Validate final gates and generate JSON/Markdown reports |
-| `cloudflare_reconnaissance_prepare` | 1 | Build run metadata, architecture summary, and canonical coverage ledger from four caller-supplied scout reports |
+| `cloudflare_reconnaissance_prepare` | 1 | Build run metadata, architecture summary, and canonical coverage ledger from four caller-supplied scout reports |\n| `cloudflare_hunting_wave_prepare` | 2 | Validate, rank, assign, and explicitly defer canonical coverage units for a bounded hunting wave |\n| `cloudflare_hunter_results_consolidate` | 2 | Validate ownership and structured hunter results, then consolidate only assigned ledger units |
 | `cloudflare_coverage_ledger_validate` | 1–2 | Validate canonical coverage ledgers with Cloudflare's upstream validator |
 | `cloudflare_findings_validate` | 4–5 | Validate findings against Cloudflare's upstream report schema and semantic rules |
 
-The Phase 1 adapter follows the upstream reconnaissance contract: four distinct scout-report categories, a pre-recon budget gate, architecture summary, scope-aware canonical coverage units, and explicit prior-run limitations. It does not spawn agents; reports are caller-supplied. The `cloudflare_*_validate` tools run upstream validators and schema preserved under `vendor/cloudflare-security-audit-skill/`. Upstream methodology, companion guidance, validator tests, and notices are also preserved there under MIT.
+The Phase 1 adapter follows the upstream reconnaissance contract: four distinct scout-report categories, a pre-recon budget gate, architecture summary, scope-aware canonical coverage units, and explicit prior-run limitations. Phase 2 adds deterministic priority ranking, bounded assignments, explicit deferred states, structured result consolidation, ownership checks, and parent-confirmed artifact promotion checks. Neither phase spawns agents; scout and hunter results are caller-supplied. The `cloudflare_*_validate` tools run upstream validators and schema preserved under `vendor/cloudflare-security-audit-skill/`. Upstream methodology, companion guidance, validator tests, and notices are also preserved there under MIT.
 
 The workflow is intentionally explicit: reconnaissance inventory is not a completed review; heuristic matches are not confirmed vulnerabilities; a separate reviewer must provide verification checks; and incomplete coverage or verification keeps the run marked incomplete.
 
@@ -89,7 +89,7 @@ A future sandboxed runner would require OS-enforced isolation, no external netwo
 ## Workflow model
 
 1. **Reconnaissance:** use `cloudflare_reconnaissance_prepare` with four source-cited scout reports and coverage-unit candidates; it emits `run-metadata.json`, `architecture.md`, and a canonical `coverage-ledger.json` validated by Cloudflare's upstream validator. It does not spawn agents.
-2. **Coverage planning:** create and validate one ledger entry for every in-scope path.
+2. **Coverage-led hunting:** prepare a bounded wave with `cloudflare_hunting_wave_prepare`; return one structured result per assigned coverage ID; consolidate with `cloudflare_hunter_results_consolidate`; then run a fresh source-reading coverage critic before another wave. The planner does not spawn hunters. Local checks are accepted only when the parent explicitly supplies paths already promoted through a trusted sandbox procedure.
 3. **Candidate generation:** inspect source and produce heuristic leads with file/line evidence.
 4. **Structured findings:** validate records, verdicts, evidence and unique fingerprints.
 5. **Independent verification:** compare findings against a separate reviewer’s checks.
