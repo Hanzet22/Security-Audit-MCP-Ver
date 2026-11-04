@@ -22,7 +22,7 @@ All notable project changes are documented here.
 
 ### Changed
 - README documentation now describes the 18 exposed MCP tools and the explicit, non-autonomous workflow model.
-- CI now exercises supported Node.js LTS lines 22, 24, and 26; npm installation remains non-reproducible until a committed lockfile is added.
+- CI now exercises supported Node.js LTS lines 22, 24, and 26 and uses `npm ci` with the committed npm-generated lockfile.
 
 ### Security
 - Repository source inspection remains read-only; target source code is not executed and deployed endpoints are not probed.
