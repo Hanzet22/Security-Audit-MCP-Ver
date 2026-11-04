@@ -99,6 +99,49 @@ Use a fine-grained GitHub token with read-only repository Contents and Metadata 
 
 A future sandboxed runner would require OS-enforced isolation, no external network access, restricted environment variables, resource limits, and scratch-only writes. This project does not implement such a runner.
 
+
+## Runtime behavior and limits
+
+### Transport
+
+The current server supports **local stdio transport only** through `src/stdio.ts`.
+It does not expose an HTTP endpoint, remote MCP URL, OAuth flow, or hosted service.
+A compatible host must launch the local Node.js process. Remote transport and
+deployment are separate future work and are not implied by this repository's
+current capabilities.
+
+### GitHub access
+
+- Public repositories can be read without a token, subject to GitHub's unauthenticated API rate limits.
+- Set `GITHUB_TOKEN` in the host process environment when access to private repositories or a higher API rate limit is required.
+- Use a fine-grained token restricted to the repositories needed, with **Contents: read-only** and **Metadata: read-only** permissions.
+- The token is used only for GitHub API requests. Do not paste it into tool arguments, source files, issue reports, or committed configuration.
+- The server does not write to GitHub. A read-only token is recommended as defense in depth.
+
+### Resource bounds
+
+The GitHub API boundary applies the following fixed limits:
+
+| Resource | Limit |
+|---|---:|
+| GitHub API request timeout | 15 seconds |
+| GitHub API response body | 5 MB |
+| Repository tree entries returned | 500 |
+| Individual file content | 300 KB |
+| Source text processed by review tools | 100,000 characters |
+
+A truncated repository tree is reported as truncated; it must not be treated as a complete inventory.
+Files or responses beyond the configured limits are rejected rather than silently treated as fully reviewed.
+
+### Evidence and trust boundaries
+
+Tool output is evidence for a human-led review, not a certification or proof that a repository is secure.
+Repository refs, line ranges, scout reports, worker results, critic reviews, and orchestration
+state are supplied by callers and are not cryptographically attested by this server.
+A passing workflow gate means that the supplied records satisfy the implemented consistency
+checks; it does not prove that a separate person or agent performed the claimed work.
+Always verify important evidence against the referenced source revision before making a decision.
+
 ## Workflow model
 
 1. **Reconnaissance:** use `cloudflare_reconnaissance_prepare` with four source-cited scout reports and coverage-unit candidates; it emits `run-metadata.json`, `architecture.md`, and a canonical `coverage-ledger.json` validated by Cloudflare's upstream validator. It does not spawn agents.
