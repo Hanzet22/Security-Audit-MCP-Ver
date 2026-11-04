@@ -85,6 +85,7 @@ Use a fine-grained GitHub token with read-only repository Contents and Metadata 
 - The server never clones or executes target repository code.
 - No deployed endpoint, production service, or third-party infrastructure is probed.
 - Repository URL parsing accepts GitHub HTTPS URLs only.
+- Repository URL parsing rejects embedded credentials and non-standard ports; GitHub API responses are content-type checked and capped at 5 MB, with bounded timeouts and sanitized error messages.
 - Source pattern matches are candidate leads, not proof of exploitability.
 - Potential credential evidence is redacted before candidate output.
 - Only confirmed records may contain severity; `needs_validation` records cannot.
