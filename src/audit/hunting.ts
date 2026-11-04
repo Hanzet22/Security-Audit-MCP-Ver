@@ -141,8 +141,23 @@ export function consolidateCloudflareHunterResults(input: {
   const hardening: string[] = [];
   const uncovered: HunterResult["uncovered"] = [];
   for (const result of input.results) {
-    if (!Array.isArray(result.units) || !Array.isArray(result.candidates) || !Array.isArray(result.hardening) || !Array.isArray(result.uncovered)) {
-      throw new Error("Hunter result does not match the structured result contract.");
+    if (!Array.isArray(result.units) || !Array.isArray(result.candidates) || !Array.isArray(result.hardening) || !Array.isArray(result.uncovered) ||
+        result.units.length > 10000 || result.candidates.length > 1000 || result.hardening.length > 1000 || result.uncovered.length > 1000) {
+      throw new Error("Hunter result does not match the structured result contract or exceeds configured item limits.");
+    }
+    if (!result.hardening.every(note => typeof note === "string" && note.trim().length > 0 && note.length <= 2000)) {
+      throw new Error("Hunter hardening notes must be non-empty strings of at most 2,000 characters.");
+    }
+    for (const item of result.uncovered) {
+      if (!item || typeof item.surface !== "string" || !item.surface.trim() ||
+          typeof item.boundary !== "string" || !item.boundary.trim() ||
+          typeof item.subsystem !== "string" || !item.subsystem.trim() ||
+          typeof item.attack_class !== "string" || !item.attack_class.trim() ||
+          typeof item.reason !== "string" || !item.reason.trim() ||
+          !Array.isArray(item.starting_paths) || item.starting_paths.length === 0 ||
+          !item.starting_paths.every(isCloudflareSafeRelativePath) || !unique(item.starting_paths)) {
+        throw new Error("Uncovered proposals must contain descriptive fields and safe unique starting paths.");
+      }
     }
     for (const unit of result.units) {
       if (resultById.has(unit.coverage_id)) throw new Error(`Duplicate hunter result for ${unit.coverage_id}.`);
@@ -167,6 +182,27 @@ export function consolidateCloudflareHunterResults(input: {
     }
     hardening.push(...result.hardening);
     uncovered.push(...result.uncovered);
+  }
+  const unitCandidateFingerprints = new Set<string>();
+  for (const unitResult of resultById.values()) {
+    if (!Array.isArray(unitResult.candidate_fingerprints) ||
+        !unitResult.candidate_fingerprints.every(fp => typeof fp === "string" && /^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$/.test(fp)) ||
+        !unique(unitResult.candidate_fingerprints)) {
+      throw new Error("Each unit must provide unique, valid candidate_fingerprints.");
+    }
+    if (!Array.isArray(unitResult.unresolved) ||
+        !unitResult.unresolved.every(item => typeof item === "string" && item.trim().length > 0 && item.length <= 1000) ||
+        !unique(unitResult.unresolved)) {
+      throw new Error("Each unit must provide unique, non-empty unresolved strings.");
+    }
+    for (const fingerprint of unitResult.candidate_fingerprints) {
+      if (unitCandidateFingerprints.has(fingerprint)) throw new Error(`Candidate fingerprint ${fingerprint} is assigned to multiple coverage units.`);
+      unitCandidateFingerprints.add(fingerprint);
+    }
+  }
+  if (unitCandidateFingerprints.size !== candidateFingerprints.size ||
+      [...unitCandidateFingerprints].some(fingerprint => !candidateFingerprints.has(fingerprint))) {
+    throw new Error("Candidate records and coverage-unit candidate_fingerprints must match exactly.");
   }
   const candidateValidation = validateCloudflareFindings(candidateRecords);
   if (!candidateValidation.valid) {
@@ -203,13 +239,10 @@ export function consolidateCloudflareHunterResults(input: {
     }
     if (ownedPaths.size !== result.reviewed_paths.length || result.reviewed_paths.some(path => !ownedPaths.has(path))) throw new Error(`Reviewed path ownership mismatch for ${id}.`);
     if (checkOwners.has(unit.agent_id) === false) throw new Error(`Assigned hunter ownership missing from checks for ${id}.`);
-    if (!Array.isArray(result.unresolved) || !unique(result.unresolved)) throw new Error(`Invalid unresolved list for ${id}.`);
     if (result.disposition === "covered" && (result.unresolved.length || result.candidate_fingerprints.length)) throw new Error(`Covered unit ${id} cannot have unresolved facts or candidates.`);
     if (result.disposition === "candidate" && (!result.candidate_fingerprints.length || result.unresolved.length)) throw new Error(`Candidate unit ${id} needs fingerprints and no unresolved facts.`);
     if (result.disposition === "blocked" && !result.unresolved.length) throw new Error(`Blocked unit ${id} requires unresolved facts.`);
-    if (!Array.isArray(result.candidate_fingerprints) || !unique(result.candidate_fingerprints)) throw new Error(`Invalid candidate fingerprints for ${id}.`);
     for (const fp of result.candidate_fingerprints) {
-      if (!/^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$/.test(fp)) throw new Error(`Invalid fingerprint ${fp}.`);
       if (seenFingerprints.has(fp)) throw new Error(`Duplicate candidate fingerprint ${fp}; consolidate at parent before ledger update.`);
       seenFingerprints.add(fp);
     }
