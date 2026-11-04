@@ -1,5 +1,4 @@
-# Generate an SPDX SBOM directly from the repository source.
-# No Dockerfile or container build is required.
+# Generate a source SBOM and submit the dependency snapshot with least privilege.
 name: Anchore Syft SBOM
 
 on:
@@ -17,10 +16,10 @@ jobs:
   generate-sbom:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # required for GitHub Dependency Submission API
+      contents: read
     steps:
       - name: Checkout the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -29,7 +28,24 @@ jobs:
         with:
           path: ./
           artifact-name: security-audit-mcp-ver.spdx.json
-          # Dependency submission requires write access, which GitHub restricts on fork PRs.
-          dependency-snapshot: ${{ github.event_name != 'pull_request' }}
           upload-artifact: true
+          upload-release-assets: false
+
+  dependency-submission:
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # required for GitHub Dependency Submission API
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Submit dependency snapshot
+        uses: anchore/sbom-action@bb716408e75840bbb01e839347cd213767269d4a # pinned commit
+        with:
+          path: ./
+          dependency-snapshot: true
+          upload-artifact: false
           upload-release-assets: false
