@@ -36,13 +36,14 @@ const task = {
 };
 
 test("critic passes only after every canonical coverage ID is examined", () => {
-  const current = ledger();
+  const current = ledger().map((unit: any) => ({ ...unit, status: "deferred" }));
   const ids = current.map((unit: any) => unit.coverage_id);
+  const acceptedDeferred = ids.map((coverage_id: string) => ({ coverage_id, reason: "Explicitly deferred for this test." }));
   const complete = validateCloudflareCoverageCritic({ ledger: current, review: {
     reviewer_id: "critic-1", reviewed_at: "2026-11-04T08:00:00Z",
     architecture_refs: ["architecture.md#MCP-entrypoints"],
     examined_coverage_ids: ids, missing_units: [], reassign_ids: [],
-    accepted_deferred_ids: [], unresolved_questions: []
+    accepted_deferred_ids: acceptedDeferred, unresolved_questions: []
   }});
   assert.equal(complete.gate_passed, true);
   const partial = validateCloudflareCoverageCritic({ ledger: current, review: {
