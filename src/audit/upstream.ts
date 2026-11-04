@@ -8,6 +8,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const coverageValidator = require("../../vendor/cloudflare-security-audit-skill/validate-coverage-ledger.cjs") as {
   LIMITS: { inputBytes: number; units: number };
+  canonicalCoverageId: (refs: Record<string, string>) => string;
   validateDocument: (ledger: unknown) => string[];
 };
 const findingsValidator = require("../../vendor/cloudflare-security-audit-skill/validate-findings.cjs") as {
