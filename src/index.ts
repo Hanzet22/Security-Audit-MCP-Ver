@@ -22,6 +22,7 @@ import {
   validateCloudflareCoverageLedger,
   validateCloudflareFindings
 } from "./audit/upstream.js";
+import { prepareCloudflareReconnaissance } from "./audit/reconnaissance.js";
 
 const API_ROOT = "https://api.github.com";
 const MAX_FILE_BYTES = 300_000;
