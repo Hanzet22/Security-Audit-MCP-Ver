@@ -178,8 +178,17 @@ export function orchestrateWorkerRun(input:
         input.assignments.some(item => !SAFE_ID.test(item.task_id) || !SAFE_ID.test(item.worker_id) || !item.coverage_id.trim())) {
       throw new Error("Assignments must have unique safe task/worker IDs and unique coverage IDs.");
     }
+    const initialState: OrchestrationState = {
+      version: "1.0",
+      run_id: input.run_id,
+      phase: "hunting",
+      assignments: input.assignments.map(item => ({ ...item, status: "assigned" as const })),
+      critic_gate_passed: false,
+      verification_passed: false,
+      history: ["run_initialized"]
+    };
     return {
-      state: { version: "1.0", run_id: input.run_id, phase: "hunting", assignments: input.assignments.map(item => ({ ...item, status: "assigned" as const })), critic_gate_passed: false, verification_passed: false, history: ["run_initialized"] },
+      state: initialState,
       next_action: "Collect each worker result, validate it with worker_result_contract_validate, then record its status.",
       execution_mode: "caller_managed",
       limitations: ["The orchestrator is a stateless workflow controller; it does not create threads, processes, agents, queues, or background jobs."]
