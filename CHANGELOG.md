@@ -2,7 +2,7 @@
 
 All notable project changes are documented here.
 
-## [0.3.0] - Unreleased
+## [0.3.0] - 2026-11-04
 
 ### Security and correctness
 - Reject malformed repository identifiers, dot-segment file paths, invalid base64 content, and invalid UTF-8 source files at the GitHub read boundary.
@@ -13,11 +13,13 @@ All notable project changes are documented here.
 - Classify vendored upstream material and package manifests as dependencies rather than generated output.
 - Raise the minimum Node.js runtime to 22 because Node.js 20 reached end of life.
 - Add fast-check property tests for duplicate fingerprints, one-to-one independent review, and unknown review references.
+- Align MCP worker-task and hunter-result input schemas with their runtime contracts; reject empty task coverage/path scopes and hunter units without required checks at the protocol boundary.
 - Upgrade OSV-Scanner to v2.7.0 and Anchore SBOM Action to v0.24.3, with action references pinned to immutable commits.
 
 ### Added
 - MCP server factory and dedicated stdio entry point.
 - In-process MCP client/server integration smoke test.
+- Integration regression coverage for malformed worker-task inputs, nested task contracts, and hunter results missing required checks.
 - Structured reconnaissance, hunting, coverage, findings, verification, and reporting workflow tools.
 - Stateless caller-managed worker and critic orchestration contracts.
 - GitHub API response boundary protections, including URL validation, bounded response reads, content-type checks, timeouts, and sanitized upstream errors.
@@ -32,4 +34,4 @@ All notable project changes are documented here.
 - Repository source inspection remains read-only; target source code is not executed and deployed endpoints are not probed.
 - Upstream Cloudflare material remains attributed under its MIT license in the vendor directory.
 
-> This entry records the current development state. It is not a statement that a formal v0.3.0 release has been published or that all release gates have passed.
+> This dated entry describes the v0.3.0 release candidate. The version is not published until the `v0.3.0` Git tag and corresponding GitHub Release are created after all release gates pass.
