@@ -26,6 +26,7 @@ import { orchestrateWorkerRun, validateCloudflareCoverageCritic, validateWorkerR
 
 const API_ROOT = "https://api.github.com";
 const MAX_FILE_BYTES = 300_000;
+const MAX_API_RESPONSE_BYTES = 5_000_000;
 const MAX_TREE_ITEMS = 500;
 const MAX_SOURCE_CHARS = 100_000;
 const token = process.env.GITHUB_TOKEN;
@@ -38,8 +39,10 @@ function parseRepo(input: string, ref?: string): RepoRef {
 
   if (/^https?:\/\//i.test(raw)) {
     const url = new URL(raw);
-    if (url.protocol !== "https:" || !["github.com", "www.github.com"].includes(url.hostname.toLowerCase())) {
-      throw new Error("Only https://github.com repository URLs are accepted.");
+    if (url.protocol !== "https:" ||
+        !["github.com", "www.github.com"].includes(url.hostname.toLowerCase()) ||
+        url.username || url.password || (url.port && url.port !== "443")) {
+      throw new Error("Only standard HTTPS GitHub repository URLs without credentials or custom ports are accepted.");
     }
     if (url.search || url.hash) throw new Error("Repository URLs must not include query strings or fragments.");
     parts = url.pathname.split("/").filter(Boolean);
@@ -50,6 +53,9 @@ function parseRepo(input: string, ref?: string): RepoRef {
 
   if (parts.length !== 2 || !/^[A-Za-z0-9_.-]+$/.test(parts[0] ?? "") || !/^[A-Za-z0-9_.-]+$/.test(parts[1] ?? "")) {
     throw new Error("Repository must be owner/name or a GitHub repository URL.");
+  }
+  if (ref !== undefined && (!ref.trim() || ref.length > 200 || /[\u0000-\u001f\u007f]/.test(ref))) {
+    throw new Error("Git reference must be non-empty, at most 200 characters, and contain no control characters.");
   }
   return { owner: parts[0]!, repo: parts[1]!, ...(ref ? { ref } : {}) };
 }
@@ -67,10 +73,52 @@ async function github(path: string): Promise<any> {
     signal: AbortSignal.timeout(15_000)
   });
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`GitHub API returned ${response.status}: ${detail.slice(0, 300)}`);
+    await response.body?.cancel().catch(() => undefined);
+    throw new Error(`GitHub API returned HTTP ${response.status}.`);
   }
-  return response.json();
+
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!/application\/(?:json|vnd\.github\+json)/i.test(contentType)) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new Error("GitHub API returned an unexpected content type.");
+  }
+
+  const declaredLength = Number(response.headers.get("content-length") ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_API_RESPONSE_BYTES) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new Error("GitHub API response exceeds the configured size limit.");
+  }
+
+  if (!response.body) throw new Error("GitHub API returned an empty response body.");
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_API_RESPONSE_BYTES) {
+        await reader.cancel();
+        throw new Error("GitHub API response exceeds the configured size limit.");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  } catch {
+    throw new Error("GitHub API returned invalid JSON.");
+  }
 }
 
 function result(value: unknown) {
