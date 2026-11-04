@@ -11,6 +11,8 @@ All notable project changes are documented here.
 - Require every deferred coverage unit to be explicitly accepted by the critic before the next-wave gate can pass.
 - Classify vendored upstream material and package manifests as dependencies rather than generated output.
 - Raise the minimum Node.js runtime to 22 because Node.js 20 reached end of life.
+- Add fast-check property tests for duplicate fingerprints, one-to-one independent review, and unknown review references.
+- Upgrade OSV-Scanner to v2.7.0 and Anchore SBOM Action to v0.24.3, with action references pinned to immutable commits.
 
 ### Added
 - MCP server factory and dedicated stdio entry point.
