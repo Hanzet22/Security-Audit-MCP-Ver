@@ -6,7 +6,7 @@ This is an independent implementation inspired by the workflow in [Cloudflare Se
 
 ## Current status
 
-**v0.3.0 — release preparation; no formal GitHub Release has been published.**
+**v0.3.0 — release candidate; no Git tag or formal GitHub Release has been published yet.**
 
 The server currently exposes **18 MCP tools**:
 
@@ -155,6 +155,10 @@ The current implementation provides workflow primitives, not an autonomous six-p
 ## Security
 
 See [SECURITY.md](./SECURITY.md) for supported versions, reporting guidance, and project scope.
+
+## Release readiness
+
+The v0.3.0 release candidate is being prepared. Before publishing a tag or GitHub Release, follow the repository's [release checklist](./RELEASE_CHECKLIST.md). The current transport is local stdio only; no hosted HTTP endpoint or remote MCP service is included.
 
 ## Changelog
 
