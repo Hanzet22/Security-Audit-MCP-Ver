@@ -6,7 +6,7 @@ This is an independent implementation inspired by the workflow in [Cloudflare Se
 
 ## Current status
 
-**v0.2.0 — MCP SDK v2 migration and structured audit workflow scaffold.**
+**v0.3.0-dev — MCP SDK v2, structured workflow primitives, and upstream Cloudflare validators.**
 
 The server currently exposes:
 
@@ -20,9 +20,9 @@ The server currently exposes:
 | `audit_coverage_validate` | 2 | Validate the coverage ledger |
 | `audit_findings_validate` | 4 | Validate structured finding records |
 | `audit_independent_verify` | 5 | Compare findings with separately supplied reviewer checks |
-| `audit_report_generate` | 6 | Validate final gates and generate JSON/Markdown reports |
+| `audit_report_generate` | 6 | Validate final gates and generate JSON/Markdown reports |\n| `cloudflare_coverage_ledger_validate` | 1–2 | Validate canonical coverage ledgers with Cloudflare's upstream validator |\n| `cloudflare_findings_validate` | 4–5 | Validate findings against Cloudflare's upstream report schema and semantic rules |
 
-The workflow is intentionally explicit: reconnaissance inventory is not a completed review; heuristic matches are not confirmed vulnerabilities; a separate reviewer must provide verification checks; and incomplete coverage or verification keeps the run marked incomplete.
+The two `cloudflare_*_validate` tools run the upstream Cloudflare validators and schema preserved under `vendor/cloudflare-security-audit-skill/`; they complement rather than silently replace the initial MCP-native contracts. The upstream code is MIT-licensed and retains its separate notice.\n\nThe workflow is intentionally explicit: reconnaissance inventory is not a completed review; heuristic matches are not confirmed vulnerabilities; a separate reviewer must provide verification checks; and incomplete coverage or verification keeps the run marked incomplete.
 
 ## Requirements
 
@@ -75,7 +75,7 @@ Use a fine-grained GitHub token with read-only repository Contents and Metadata 
 - Source pattern matches are candidate leads, not proof of exploitability.
 - Potential credential evidence is redacted before candidate output.
 - Only confirmed records may contain severity; `needs_validation` records cannot.
-- The server does not spawn independent sub-agents. Phase 5 requires separately supplied reviewer checks.
+- The server does not spawn independent sub-agents. The upstream validation tools validate record structure and semantics; they do not independently re-read repository source or establish a vulnerability by themselves. Phase 5 requires separately supplied reviewer checks.
 - Reports are marked `incomplete` unless coverage and independent-verification gates pass.
 - Do not submit secrets or private source code unless you are authorized to share them.
 
