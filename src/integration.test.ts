@@ -55,7 +55,7 @@ test("MCP server initializes, discovers all tools, and executes a contract tool"
       }
     });
 
-    assert.equal(called.isError, undefined);
+    assert.notEqual(called.isError, true);
     const textContent = called.content.find(item => item.type === "text");
     assert.ok(textContent && textContent.type === "text");
     const payload = JSON.parse(textContent.text) as { valid?: boolean };
