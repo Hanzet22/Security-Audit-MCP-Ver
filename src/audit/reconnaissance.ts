@@ -4,7 +4,7 @@
  * This module does not spawn agents, execute target code, or contact deployed systems.
  * Copyright (C) 2026 Hanzet22 — GNU AGPL-3.0-or-later.
  */
-import { canonicalCloudflareCoverageId, validateCloudflareCoverageLedger } from "./upstream.js";
+import { canonicalCloudflareCoverageId, isCloudflareSafeRelativePath, validateCloudflareCoverageLedger } from "./upstream.js";
 
 export type ReconFact = { statement: string; refs: string[] };
 export type ScoutReports = {
@@ -58,6 +58,17 @@ export function prepareCloudflareReconnaissance(input: {
   selected_companion_files?: string[] | undefined;
 }) {
   const minimum = 4 + (input.profile === "quick" ? 1 : 2) + 1;
+  if (input.scope_paths.some(path => !isCloudflareSafeRelativePath(path))) {
+    throw new Error("scope_paths must contain safe repository-relative paths.");
+  }
+  if (new Set(input.scope_paths).size !== input.scope_paths.length) {
+    throw new Error("scope_paths must not contain duplicates.");
+  }
+  if (input.profile === "quick" && input.coverage_units.some(unit =>
+    unit.canonical_refs.subsystem !== "profile/quick/all-in-scope-subsystems" || unit.canonical_refs.lifecycle !== undefined
+  )) {
+    throw new Error("The quick profile requires the fixed canonical subsystem reference and must not split units by lifecycle.");
+  }
   const budgetBlocked = input.budget !== null && input.budget < minimum;
   if ((input.prior_run_paths ?? []).length > 0) {
     throw new Error("Prior-run paths alone are not prior evidence. Load and validate the actual prior run-metadata.json, coverage-ledger.json, and findings.json before supplying carry-forward data.");
