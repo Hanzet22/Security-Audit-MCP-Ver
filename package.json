@@ -8,12 +8,12 @@
     "node": ">=20.11.0"
   },
   "scripts": {
-    "dev": "tsx src/index.ts",
+    "dev": "tsx src/stdio.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js",
+    "start": "node dist/stdio.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "npm run test:unit && npm run test:upstream",
-    "test:unit": "tsx --test src/audit/contracts.test.ts src/audit/upstream.test.ts src/audit/reconnaissance.test.ts src/audit/hunting.test.ts src/audit/orchestration.test.ts",
+    "test:unit": "tsx --test src/audit/contracts.test.ts src/audit/upstream.test.ts src/audit/reconnaissance.test.ts src/audit/hunting.test.ts src/audit/orchestration.test.ts src/integration.test.ts",
     "test:upstream": "node --test vendor/cloudflare-security-audit-skill/validate-coverage-ledger.test.cjs vendor/cloudflare-security-audit-skill/validate-findings.test.cjs"
   },
   "dependencies": {
@@ -23,7 +23,8 @@
   "devDependencies": {
     "@types/node": "^22.15.30",
     "tsx": "^4.19.4",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@modelcontextprotocol/client": "^2.4.0"
   },
   "license": "AGPL-3.0-or-later"
 }
