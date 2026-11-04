@@ -119,15 +119,25 @@ test("MCP server initializes, discovers all tools, and executes a contract tool"
     assert.equal(duplicateReportPayload.run_status, "incomplete");
     assert.equal(duplicateReportPayload.gates?.findings?.valid, false);
 
-    const secret = "ghp_123456789012345678901234567890123456";
+    const secrets = [
+      "ghp_123456789012345678901234567890123456",
+      "abc.def-ghi",
+      "dXNlcjpwYXNz",
+      "xoxb-1234567890-abcdefghijk",
+      "AIza1234567890123456789012345678901234567",
+      "sk_live_12345678901234567890",
+      "https://user:password@example.com"
+    ];
     const secretScan = await client.callTool({
       name: "source_security_review",
-      arguments: { source: `const token = ${secret}; eval(input); // Bearer abc.def-ghi`, filename: "src/example.ts" }
+      arguments: {
+        source: `const token = ${secrets[0]}; const auth = "Authorization: Bearer ${secrets[1]}"; const basic = "Authorization: Basic ${secrets[2]}"; const slack = "${secrets[3]}"; const google = "${secrets[4]}"; const stripe = "${secrets[5]}"; const url = "${secrets[6]}"; eval(input);`,
+        filename: "src/example.ts"
+      }
     });
     const secretScanText = secretScan.content.find(item => item.type === "text");
     assert.ok(secretScanText && secretScanText.type === "text");
-    assert.equal(secretScanText.text.includes(secret), false);
-    assert.equal(secretScanText.text.includes("abc.def-ghi"), false);
+    for (const secret of secrets) assert.equal(secretScanText.text.includes(secret), false);
   } finally {
     await client.close();
     await server.close();
