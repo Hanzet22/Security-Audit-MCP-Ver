@@ -85,6 +85,27 @@ test("enforces Cloudflare quick-profile canonical subsystem coarsening", () => {
   assert.throws(() => prepareCloudflareReconnaissance(input({ profile: "quick" })), /fixed canonical subsystem reference/);
 });
 
+test("keeps scoped coverage paths inside the declared scope", () => {
+  const result = prepareCloudflareReconnaissance(input({
+    scope_paths: ["src/index.ts"],
+    coverage_units: [{ ...unit, starting_paths: ["src/index.ts", "src/other.ts"] }]
+  }));
+  assert.deepEqual(result.coverage_ledger[0]?.starting_paths, ["src/index.ts"]);
+});
+
+test("rejects unsafe selected companion paths", () => {
+  assert.throws(() => prepareCloudflareReconnaissance(input({
+    selected_companion_files: ["../outside.md"]
+  })), /selected_companion_files must contain unique safe/);
+});
+
+test("keeps architecture summary bounded for large explicit scopes", () => {
+  const scope_paths = Array.from({ length: 2000 }, (_, index) => `src/file-${index}.ts`);
+  const result = prepareCloudflareReconnaissance(input({ scope_paths, coverage_units: [] }));
+  assert.match(result.architecture_md, /2000 explicit repository paths/);
+  assert.ok(result.architecture_md.split(/\\s+/u).length < 1000);
+});
+
 test("rejects unsafe and duplicate scope paths", () => {
   assert.throws(() => prepareCloudflareReconnaissance(input({ scope_paths: ["../outside"] })), /safe repository-relative paths/);
   assert.throws(() => prepareCloudflareReconnaissance(input({ scope_paths: ["src/index.ts", "src/index.ts"] })), /must not contain duplicates/);
