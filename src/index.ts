@@ -22,7 +22,7 @@ import {
 const API_ROOT = "https://api.github.com";
 const MAX_FILE_BYTES = 300_000;
 const MAX_TREE_ITEMS = 500;
-const MAX_SOURCE_BYTES = 100_000;
+const MAX_SOURCE_CHARS = 100_000;
 const token = process.env.GITHUB_TOKEN;
 
 type RepoRef = { owner: string; repo: string; ref?: string };
@@ -174,7 +174,7 @@ function generateReport(
       `- Fingerprint: ${item.fingerprint}`,
       `- Description: ${item.description}`,
       ...item.evidence.map(ev => `- Evidence: ${ev.file}:${ev.line} — ${ev.description}`),
-      ...item.trace.map(step => `- Trace (${step.kind}): ${step.file}:${step.line} — ${step.description}`,
+      ...item.trace.map(step => `- Trace (${step.kind}): ${step.file}:${step.line} — ${step.description}`),
       item.verdict === "confirmed" ? `- Remediation: ${item.remediation}` : "",
       ""
     ].filter(Boolean).join("\n"))
@@ -290,10 +290,13 @@ function createServer(): McpServer {
   server.registerTool("source_security_review", {
     description: "Phase 2/3: generate heuristic source-review candidates. Results are leads only and never confirmed automatically.",
     inputSchema: z.object({
-      source: z.string().min(1).max(MAX_SOURCE_BYTES),
+      source: z.string().min(1).max(MAX_SOURCE_CHARS),
       filename: z.string().max(500).optional()
     })
   }, async ({ source, filename }) => {
+    if (Buffer.byteLength(source, "utf8") > 100_000) {
+      return failure(new Error("Source input exceeds the 100 KB UTF-8 byte limit."));
+    }
     const rules: Array<{ id: string; title: string; regex: RegExp; rationale: string }> = [
       { id: "JS_DYNAMIC_EVAL", title: "Dynamic code evaluation", regex: /\beval\s*\(|new\s+Function\s*\(/g, rationale: "Trace whether untrusted data can reach dynamic evaluation." },
       { id: "JS_WEAK_RANDOM", title: "Potentially non-cryptographic randomness", regex: /\bMath\.random\s*\(/g, rationale: "Check whether the value is used for a security-sensitive token or secret." },
@@ -379,18 +382,29 @@ function createServer(): McpServer {
   }));
 
   server.registerTool("audit_report_generate", {
-    description: "Phase 6: generate target-neutral Markdown reports from validated findings and explicit coverage/verification gates.",
+    description: "Phase 6: validate coverage and separate reviewer checks, then generate target-neutral Markdown reports.",
     inputSchema: z.object({
       repository: z.string().min(1).max(300),
       scope: z.string().min(1).max(2000),
+      scope_paths: z.array(z.string().min(1)).max(5000),
+      coverage_ledger: z.array(CoverageEntrySchema).max(5000),
       findings: z.array(FindingSchema).max(1000),
-      coverage_complete: z.boolean(),
-      independent_verification_passed: z.boolean(),
+      independent_checks: z.array(z.strictObject({
+        fingerprint: z.string().min(1),
+        agrees: z.boolean(),
+        evidence_matches: z.boolean(),
+        rationale: z.string().min(1).max(3000)
+      })).max(1000),
       requested_status: z.enum(["complete", "incomplete"])
     })
-  }, async ({ repository, scope, findings, coverage_complete, independent_verification_passed, requested_status }) => result(
-    generateReport(repository, scope, findings, coverage_complete, independent_verification_passed, requested_status)
-  ));
+  }, async ({ repository, scope, scope_paths, coverage_ledger, findings, independent_checks, requested_status }) => {
+    const coverage = validateCoverage(scope_paths, coverage_ledger);
+    const verification = verifyIndependentReview(findings, independent_checks);
+    return result({
+      ...generateReport(repository, scope, findings, coverage.valid, verification.passed, requested_status),
+      gates: { coverage, independent_verification: verification }
+    });
+  });
 
   return server;
 }
