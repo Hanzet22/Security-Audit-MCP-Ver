@@ -2,13 +2,15 @@
 
 **Language:** English (EU) · [English (US)](./README.en-US.md) · [Bahasa Indonesia](./README.id.md) · [Malay (Singapore)](./README.ms-SG.md)
 
+**Setup guide:** [SETUP.md](./SETUP.md)
+
 Read-only, evidence-led source-code security audit tools exposed through the Model Context Protocol (MCP).
 
 Independent implementation inspired by the workflow in [Cloudflare Security Audit Skill](https://github.com/cloudflare/security-audit-skill). This project is not affiliated with or endorsed by Cloudflare. Cloudflare's upstream material remains under its original MIT licence; this project's own code is licensed under AGPL-3.0-or-later. See [ATTRIBUTIONS.md](./ATTRIBUTIONS.md).
 
 ## Status
 
-**Version 0.3.0 release publication status: pending.** The release tag and formal GitHub Release must exist before this version is described as published. See [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md).
+**Version 0.3.1 — RELEASED.** See [CHANGELOG.md](./CHANGELOG.md) for release notes and [SETUP.md](./SETUP.md) for installation and MCP client configuration.
 
 The server exposes 18 MCP tools covering repository reconnaissance, coverage planning, source review, findings validation, independent verification, orchestration contracts and report generation. It provides workflow primitives, not an autonomous audit agent.
 
