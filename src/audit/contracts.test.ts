@@ -62,6 +62,31 @@ test("duplicate finding fingerprints are rejected", () => {
   assert.ok(result.errors.some(error => error.includes("Duplicate fingerprint")));
 });
 
+test("independent verification rejects duplicate findings and unrelated reviewer records", () => {
+  const finding = {
+    verdict: "rejected" as const,
+    fingerprint: "RULE:file.ts:10",
+    title: "Candidate",
+    description: "Candidate was disproved",
+    evidence: [{ file: "file.ts", line: 10, description: "Source evidence" }],
+    trace: [{ kind: "sink" as const, file: "file.ts", line: 10, scope: "request boundary", description: "Reviewed sink" }],
+    claimed_root_cause: "Claimed issue",
+    rejection_reason: "No untrusted data reaches this sink"
+  };
+  const duplicate = verifyIndependentReview([finding, finding], [{
+    fingerprint: finding.fingerprint, agrees: true, evidence_matches: true, rationale: "Reviewed"
+  }]);
+  assert.equal(duplicate.passed, false);
+  assert.deepEqual(duplicate.duplicate_finding_records, [finding.fingerprint]);
+
+  const unrelated = verifyIndependentReview([finding], [
+    { fingerprint: finding.fingerprint, agrees: true, evidence_matches: true, rationale: "Reviewed" },
+    { fingerprint: "UNRELATED:file.ts:1", agrees: true, evidence_matches: true, rationale: "Not part of this report" }
+  ]);
+  assert.equal(unrelated.passed, false);
+  assert.deepEqual(unrelated.unknown_review_records, ["UNRELATED:file.ts:1"]);
+});
+
 test("independent verification requires a matching reviewer record", () => {
   const finding = {
     verdict: "rejected",
