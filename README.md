@@ -20,9 +20,13 @@ The server currently exposes:
 | `audit_coverage_validate` | 2 | Validate the coverage ledger |
 | `audit_findings_validate` | 4 | Validate structured finding records |
 | `audit_independent_verify` | 5 | Compare findings with separately supplied reviewer checks |
-| `audit_report_generate` | 6 | Validate final gates and generate JSON/Markdown reports |\n| `cloudflare_coverage_ledger_validate` | 1–2 | Validate canonical coverage ledgers with Cloudflare's upstream validator |\n| `cloudflare_findings_validate` | 4–5 | Validate findings against Cloudflare's upstream report schema and semantic rules |
+| `audit_report_generate` | 6 | Validate final gates and generate JSON/Markdown reports |
+| `cloudflare_coverage_ledger_validate` | 1–2 | Validate canonical coverage ledgers with Cloudflare's upstream validator |
+| `cloudflare_findings_validate` | 4–5 | Validate findings against Cloudflare's upstream report schema and semantic rules |
 
-The two `cloudflare_*_validate` tools run the upstream Cloudflare validators and schema preserved under `vendor/cloudflare-security-audit-skill/`; they complement rather than silently replace the initial MCP-native contracts. The upstream code is MIT-licensed and retains its separate notice.\n\nThe workflow is intentionally explicit: reconnaissance inventory is not a completed review; heuristic matches are not confirmed vulnerabilities; a separate reviewer must provide verification checks; and incomplete coverage or verification keeps the run marked incomplete.
+The two `cloudflare_*_validate` tools run the upstream Cloudflare validators and schema preserved under `vendor/cloudflare-security-audit-skill/`; they complement rather than silently replace the initial MCP-native contracts. The upstream code is MIT-licensed and retains its separate notice.
+
+The workflow is intentionally explicit: reconnaissance inventory is not a completed review; heuristic matches are not confirmed vulnerabilities; a separate reviewer must provide verification checks; and incomplete coverage or verification keeps the run marked incomplete.
 
 ## Requirements
 
