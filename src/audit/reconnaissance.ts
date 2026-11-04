@@ -59,7 +59,7 @@ export function prepareCloudflareReconnaissance(input: {
 }) {
   const minimum = 4 + (input.profile === "quick" ? 1 : 2) + 1;
   const budgetBlocked = input.budget !== null && input.budget < minimum;
-  const compatiblePriorRuns = (input.prior_run_paths ?? []).length > 0;
+  if ((input.prior_run_paths ?? []).length > 0) {\n    throw new Error("Prior-run paths alone are not prior evidence. Load and validate the actual prior run-metadata.json, coverage-ledger.json, and findings.json before supplying carry-forward data.");\n  }\n  const compatiblePriorRuns = false;
   const metadata = {
     run_id: input.run_id,
     repo: input.repository,
@@ -124,7 +124,7 @@ export function prepareCloudflareReconnaissance(input: {
     const inScope = input.scope_paths.length === 0 ||
       unit.starting_paths.some(path => input.scope_paths.includes(path));
     const refs = unit.canonical_refs;
-    const priorStatus = compatiblePriorRuns ? "new" : "none";
+    const priorStatus = "none";
     const lifecycleFields = refs.lifecycle === undefined ? {} : { lifecycle: unit.lifecycle ?? refs.lifecycle };
     return {
       coverage_id: canonicalCloudflareCoverageId(refs),
