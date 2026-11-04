@@ -21,7 +21,8 @@ The server currently exposes:
 | `audit_findings_validate` | 4 | Validate structured finding records |
 | `audit_independent_verify` | 5 | Compare findings with separately supplied reviewer checks |
 | `audit_report_generate` | 6 | Validate final gates and generate JSON/Markdown reports |
-| `cloudflare_reconnaissance_prepare` | 1 | Build run metadata, architecture summary, and canonical coverage ledger from four caller-supplied scout reports |\n| `cloudflare_coverage_ledger_validate` | 1–2 | Validate canonical coverage ledgers with Cloudflare's upstream validator |
+| `cloudflare_reconnaissance_prepare` | 1 | Build run metadata, architecture summary, and canonical coverage ledger from four caller-supplied scout reports |
+| `cloudflare_coverage_ledger_validate` | 1–2 | Validate canonical coverage ledgers with Cloudflare's upstream validator |
 | `cloudflare_findings_validate` | 4–5 | Validate findings against Cloudflare's upstream report schema and semantic rules |
 
 The Phase 1 adapter follows the upstream reconnaissance contract: four distinct scout-report categories, a pre-recon budget gate, architecture summary, scope-aware canonical coverage units, and explicit prior-run limitations. It does not spawn agents; reports are caller-supplied. The `cloudflare_*_validate` tools run upstream validators and schema preserved under `vendor/cloudflare-security-audit-skill/`. Upstream methodology, companion guidance, validator tests, and notices are also preserved there under MIT.
